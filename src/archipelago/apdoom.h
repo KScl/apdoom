@@ -28,7 +28,7 @@ extern "C"
 
 #define APDOOM_MAJOR 1
 #define APDOOM_MINOR 0
-#define APDOOM_PATCH 3
+#define APDOOM_PATCH 4
 #define APDOOM_STR(x) APDOOM_STR2(x)
 #define APDOOM_STR2(x) #x
 #define APDOOM_VERSION APDOOM_STR(APDOOM_MAJOR) "." APDOOM_STR(APDOOM_MINOR) "." APDOOM_STR(APDOOM_PATCH)
@@ -45,6 +45,7 @@ typedef struct
     int doom_type;
     int index;
     int check_sanity;
+    int unreachable;
 } ap_thing_info_t;
 
 

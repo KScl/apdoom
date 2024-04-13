@@ -363,6 +363,12 @@ int generate(game_t* game)
             //if (level->map_state->locations[i].unreachable)
             //    continue; // We don't include this location
 
+            if (level->idx.ep == 0 && i == 43)
+            {
+                int tmp;
+                tmp = 5;
+            }
+
             auto loc_it = game->location_doom_types.find(thing.type);
             if (loc_it != game->location_doom_types.end())
             {
@@ -679,7 +685,6 @@ class LocationDict(TypedDict, total=False): \n\
         {
             // Check from json if that location is not marked as "unreachable"
 
-
             fprintf(fout, "    %llu: {", loc.id);
             fprintf(fout, "'name': %s", convert_quoted_str(loc.name).c_str());
             fprintf(fout, ",\n             'episode': %i", loc.idx.ep + 1);
@@ -822,16 +827,18 @@ class LocationDict(TypedDict, total=False): \n\
                 for (const auto& thing : level->map->things)
                 {
                     bool check_sanity = false;
+                    bool unreachable = true;
                     for (const auto& loc : ap_locations)
                     {
                         if (loc.idx == level->idx &&
                             loc.doom_thing_index == idx)
                         {
+                            unreachable = false;
                             check_sanity = loc.check_sanity;
                             break;
                         }
                     }
-                    fprintf(fout, "            {%i, %i, %i},\n", thing.type, idx, check_sanity ? 1 : 0);
+                    fprintf(fout, "            {%i, %i, %i, %i},\n", thing.type, idx, check_sanity ? 1 : 0, unreachable ? 1 : 0);
                     ++idx;
                 }
                 fprintf(fout, "        }},\n");
@@ -901,7 +908,7 @@ class LocationDict(TypedDict, total=False): \n\
             if (level->idx.ep != prev_ep)
             {
                 prev_ep = level->idx.ep;
-                fprintf(fout, "\ndef set_episode%i_rules(player, world, pro):\n", level->idx.ep + 1);
+                fprintf(fout, "\ndef set_episode%i_rules(player, multiworld, pro):\n", level->idx.ep + 1);
             }
 
             const std::string& level_name = level->name;
@@ -933,7 +940,7 @@ class LocationDict(TypedDict, total=False): \n\
                             ors.push_back("state.has(\"" + get_requirement_name(game, level_name, doom_type) + "\", player, 1)");
                         }
 
-                        fprintf(fout, "    set_rule(world.get_entrance(\"Hub -> %s\", player), lambda state:\n", region_name.c_str());
+                        fprintf(fout, "    set_rule(multiworld.get_entrance(\"Hub -> %s\", player), lambda state:\n", region_name.c_str());
 
                         if (ands.empty())
                             fprintf(fout, "        %s)\n", onut::join(ors, " or\n        ").c_str());
@@ -1000,7 +1007,7 @@ class LocationDict(TypedDict, total=False): \n\
                     }
 
                     auto target_name = level_name + " " + level->map_state->regions[target_region].name;
-                    fprintf(fout, "%s    set_rule(world.get_entrance(\"%s -> %s\", player), lambda state:\n", indent.c_str(), region_name.c_str(), target_name.c_str());
+                    fprintf(fout, "%s    set_rule(multiworld.get_entrance(\"%s -> %s\", player), lambda state:\n", indent.c_str(), region_name.c_str(), target_name.c_str());
                         
                     if (ands.empty())
                         fprintf(fout, "%s        %s)\n", indent.c_str(), onut::join(ors, " or\n        ").c_str());
@@ -1023,11 +1030,11 @@ class LocationDict(TypedDict, total=False): \n\
 
         fprintf(fout, "\ndef set_rules(%s_world: \"%sWorld\", included_episodes, pro):\n", game->world.c_str(), game->classname.c_str());
         fprintf(fout, "    player = %s_world.player\n", game->world.c_str());
-        fprintf(fout, "    world = %s_world.multiworld\n\n", game->world.c_str());
+        fprintf(fout, "    multiworld = %s_world.multiworld\n\n", game->world.c_str());
         for (int ep = 0; ep < game->ep_count; ++ep)
         {
             fprintf(fout, "    if included_episodes[%i]:\n", ep);
-            fprintf(fout, "        set_episode%i_rules(player, world, pro)\n", ep + 1);
+            fprintf(fout, "        set_episode%i_rules(player, multiworld, pro)\n", ep + 1);
         }
 
         fclose(fout);

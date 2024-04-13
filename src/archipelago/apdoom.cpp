@@ -364,6 +364,7 @@ int validate_doom_location(ap_level_index_t idx, int index)
 {
     ap_level_info_t* level_info = ap_get_level_info(idx);
     if (index >= level_info->thing_count) return 0;
+	if (level_info->thing_infos[index].unreachable) return 0;
     return level_info->thing_infos[index].check_sanity == 0 || ap_state.check_sanity == 1;
 }
 
@@ -1496,16 +1497,16 @@ void apdoom_check_victory()
 	else
 	{
 		// All levels
-		for (int ep = 0; ep < ap_episode_count; ++ep)
-		{
-			if (!ap_state.episodes[ep]) continue;
-		
-			int map_count = ap_get_map_count(ep + 1);
-			for (int map = 0; map < map_count; ++map)
-			{
-				if (!ap_get_level_state(ap_level_index_t{ep, map})->completed) return;
-			}
-		}
+		//for (int ep = 0; ep < ap_episode_count; ++ep)
+		//{
+		//	if (!ap_state.episodes[ep]) continue;
+		//
+		//	int map_count = ap_get_map_count(ep + 1);
+		//	for (int map = 0; map < map_count; ++map)
+		//	{
+		//		if (!ap_get_level_state(ap_level_index_t{ep, map})->completed) return;
+		//	}
+		//}
 	}
 
 	ap_state.victory = 1;
@@ -1671,6 +1672,7 @@ int ap_validate_doom_location(ap_level_index_t idx, int doom_type, int index)
 	ap_level_info_t* level_info = ap_get_level_info(idx);
     if (index >= level_info->thing_count) return -1;
 	if (level_info->thing_infos[index].doom_type != doom_type) return -1;
+	if (level_info->thing_infos[index].unreachable) return 0;
     return level_info->thing_infos[index].check_sanity == 0 || ap_state.check_sanity == 1;
 }
 

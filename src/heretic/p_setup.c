@@ -730,6 +730,24 @@ void P_LoadThings(int lump)
                 }
             }
         }
+
+        // Make sure we have at least 1 iron lynch in E4M8
+        if (gameepisode == 4 && gamemap == 8)
+        {
+            int iron_lynch_count = 0;
+            for (int i = 0; i < monster_count; ++i)
+                if (monsters[i]->doom_type == 6)
+                    iron_lynch_count++;
+            while (iron_lynch_count < 1)
+            {
+                int i = rand() % monster_count;
+                if (monsters[i]->doom_type != 6)
+                {
+                    monsters[i] = &random_monster_defs[12];
+                    iron_lynch_count++;
+                }
+            }
+        }
         
         // Randomly pick them until empty, and place them in different spots
         for (i = 0; i < spawn_count; i++)
