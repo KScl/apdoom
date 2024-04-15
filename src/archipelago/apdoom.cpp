@@ -1497,16 +1497,16 @@ void apdoom_check_victory()
 	else
 	{
 		// All levels
-		//for (int ep = 0; ep < ap_episode_count; ++ep)
-		//{
-		//	if (!ap_state.episodes[ep]) continue;
-		//
-		//	int map_count = ap_get_map_count(ep + 1);
-		//	for (int map = 0; map < map_count; ++map)
-		//	{
-		//		if (!ap_get_level_state(ap_level_index_t{ep, map})->completed) return;
-		//	}
-		//}
+		for (int ep = 0; ep < ap_episode_count; ++ep)
+		{
+			if (!ap_state.episodes[ep]) continue;
+		
+			int map_count = ap_get_map_count(ep + 1);
+			for (int map = 0; map < map_count; ++map)
+			{
+				if (!ap_get_level_state(ap_level_index_t{ep, map})->completed) return;
+			}
+		}
 	}
 
 	ap_state.victory = 1;
