@@ -106,6 +106,12 @@
     "unique_fillers": [
         {"doom_type": 2026, "name": "Computer area map", "group": "Computer area maps", "sprite": "PMAPA0"}
     ],
+    "ap_only_items": [
+        {"doom_type": 65001, "name": "Bullet capacity", "group": "", "sprite": "BPAKA0"},
+        {"doom_type": 65002, "name": "Shell capacity", "group": "", "sprite": "BPAKA0"},
+        {"doom_type": 65003, "name": "Energy cell capacity", "group": "", "sprite": "BPAKA0"},
+        {"doom_type": 65004, "name": "Rocket capacity", "group": "", "sprite": "BPAKA0"}
+    ],
     "keys": [
         {"doom_type": 5, "name": "Blue keycard", "group": "Keys", "key": 0, "use_skull": false, "region_name": "Blue", "color": [0, 0, 1], "sprite": "BKEYB0"},
         {"doom_type": 40, "name": "Blue skull key", "group": "Keys", "key": 0, "use_skull": true, "region_name": "Blue", "color": [0, 0, 1], "sprite": "BSKUB0"},

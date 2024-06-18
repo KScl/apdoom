@@ -427,6 +427,11 @@ int generate(game_t* game)
 
     OLog(std::to_string(total_loc_count) + " locations\n" + std::to_string(total_item_count - 3) + " items");
 
+    // Items unique to Archipelago
+    item_next_id = item_id_base + 600;
+    for (const auto& def : game->ap_only_items)
+        add_item(def.name, def.doom_type, 0, PROGRESSION, def.group);
+
     //--- Remap location's IDs
     {
         if (!game->loc_remap.empty())
@@ -857,6 +862,8 @@ class LocationDict(TypedDict, total=False): \n\
         for (const auto& item : game->unique_progressions)
             fprintf(fout, "    {%i, \"%s\"},\n", item.doom_type, item.sprite.c_str());
         for (const auto& item : game->unique_fillers)
+            fprintf(fout, "    {%i, \"%s\"},\n", item.doom_type, item.sprite.c_str());
+        for (const auto& item : game->ap_only_items)
             fprintf(fout, "    {%i, \"%s\"},\n", item.doom_type, item.sprite.c_str());
         for (const auto& item : game->keys)
             fprintf(fout, "    {%i, \"%s\"},\n", item.item.doom_type, item.item.sprite.c_str());

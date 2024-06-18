@@ -111,6 +111,17 @@ void init_data()
             game.unique_fillers.push_back(item);
         }
 
+        const auto& ap_only_items_json = game_json["ap_only_items"];
+        for (const auto& ap_only_item_json : ap_only_items_json)
+        {
+            ap_item_def_t item;
+            item.doom_type = ap_only_item_json["doom_type"].asInt();
+            item.name = ap_only_item_json["name"].asString();
+            item.group = ap_only_item_json["group"].asString();
+            item.sprite = ap_only_item_json["sprite"].asString();
+            game.ap_only_items.push_back(item);
+        }
+
         const auto& keys_json = game_json["keys"];
         for (const auto& key_json : keys_json)
         {

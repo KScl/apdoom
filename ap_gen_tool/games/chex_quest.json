@@ -60,6 +60,8 @@
     "unique_fillers": [
         {"doom_type": 2026, "name": "Computer area map", "group": "Computer area maps", "sprite": "PMAPA0"}
     ],
+    "ap_only_items": [
+    ],
     "keys": [
         {"doom_type": 5, "name": "Blue key", "group": "Keys", "key": 0, "use_skull": false, "region_name": "Blue", "color": [0, 0, 1], "sprite": "BKEYB0"},
         {"doom_type": 6, "name": "Yellow key", "group": "Keys", "key": 1, "use_skull": false, "region_name": "Yellow", "color": [1, 1, 0], "sprite": "YKEYB0"},
