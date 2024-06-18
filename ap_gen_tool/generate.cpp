@@ -298,7 +298,12 @@ int generate(game_t* game)
     ap_items.reserve(1000);
 
     for (const auto& def : game->progressions)
-        add_item(def.name, def.doom_type, 1, PROGRESSION, def.group);
+    {
+        // Don't let backpacks be progression balanced
+        item_classification_t cls = (def.doom_type == 8) ? PROGRESSION_SKIP_BALANCING : PROGRESSION;
+        add_item(def.name, def.doom_type, 1, cls, def.group);
+    }
+
     for (const auto& def : game->fillers)
         add_item(def.name, def.doom_type, 0, FILLER, def.group);
     
@@ -430,7 +435,7 @@ int generate(game_t* game)
     // Items unique to Archipelago
     item_next_id = item_id_base + 600;
     for (const auto& def : game->ap_only_items)
-        add_item(def.name, def.doom_type, 0, PROGRESSION, def.group);
+        add_item(def.name, def.doom_type, 0, PROGRESSION_SKIP_BALANCING, def.group);
 
     //--- Remap location's IDs
     {
