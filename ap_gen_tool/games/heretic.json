@@ -96,8 +96,7 @@
         {"doom_type": 53, "name": "Dragon Claw", "group": "Weapons", "sprite": "WBLSA0"},
         {"doom_type": 2003, "name": "Phoenix Rod", "group": "Weapons", "sprite": "WPHXA0"},
         {"doom_type": 2002, "name": "Firemace", "group": "Weapons", "sprite": "WMCEA0"},
-        {"doom_type": 2004, "name": "Hellstaff", "group": "Weapons", "sprite": "WSKLA0"},
-        {"doom_type": 8, "name": "Bag of Holding", "group": "", "sprite": "BAGHA0"}
+        {"doom_type": 2004, "name": "Hellstaff", "group": "Weapons", "sprite": "WSKLA0"}
     ],
     "fillers": [
         {"doom_type": 36, "name": "Chaos Device", "group": "Artifacts", "sprite": "ARTIATLP"},
@@ -123,7 +122,8 @@
     "unique_fillers": [
         {"doom_type": 35, "name": "Map Scroll", "group": "Map Scrolls", "sprite": "SPMPA0"}
     ],
-    "ap_only_items": [
+    "capacity_upgrades": [
+        {"doom_type": 8, "name": "Bag of Holding", "group": "", "sprite": "BAGHA0"},
         {"doom_type": 65001, "name": "Crystal Capacity", "group": "", "sprite": "BAGHA0"},
         {"doom_type": 65002, "name": "Ethereal Arrow Capacity", "group": "", "sprite": "BAGHA0"},
         {"doom_type": 65003, "name": "Claw Orb Capacity", "group": "", "sprite": "BAGHA0"},

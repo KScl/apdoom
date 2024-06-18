@@ -111,15 +111,15 @@ void init_data()
             game.unique_fillers.push_back(item);
         }
 
-        const auto& ap_only_items_json = game_json["ap_only_items"];
-        for (const auto& ap_only_item_json : ap_only_items_json)
+        const auto& capacity_upgrades_json = game_json["capacity_upgrades"];
+        for (const auto& capacity_upgrade_json : capacity_upgrades_json)
         {
             ap_item_def_t item;
-            item.doom_type = ap_only_item_json["doom_type"].asInt();
-            item.name = ap_only_item_json["name"].asString();
-            item.group = ap_only_item_json["group"].asString();
-            item.sprite = ap_only_item_json["sprite"].asString();
-            game.ap_only_items.push_back(item);
+            item.doom_type = capacity_upgrade_json["doom_type"].asInt();
+            item.name = capacity_upgrade_json["name"].asString();
+            item.group = capacity_upgrade_json["group"].asString();
+            item.sprite = capacity_upgrade_json["sprite"].asString();
+            game.capacity_upgrades.push_back(item);
         }
 
         const auto& keys_json = game_json["keys"];
