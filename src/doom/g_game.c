@@ -1187,6 +1187,35 @@ static void G_CrispyScreenShot()
 	crispy->screenshotmsg = 2;
 }
 
+void ap_reborn_weapons(player_t *p)
+{
+    for (int i = 0; i < NUMWEAPONS; ++i)
+    {
+        p->weaponowned[i] = ap_state.player_state.weapon_owned[i];
+        if (p->weaponowned[i])
+        {
+            switch (i)
+            {
+#if 0
+                case wp_pistol: p->ammo[am_clip] = MAX(p->ammo[am_clip], deh_initial_bullets); break;
+                case wp_shotgun: p->ammo[am_shell] = MAX(p->ammo[am_shell], 30); break;
+                case wp_missile: p->ammo[am_misl] = MAX(p->ammo[am_misl], 10); break;
+                case wp_plasma: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
+                case wp_bfg: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
+#else
+                // STRAIN
+                case wp_chaingun: p->ammo[am_clip] = MAX(p->ammo[am_clip], 100); break;
+                case wp_shotgun: p->ammo[am_shell] = MAX(p->ammo[am_shell], 20); break;
+                case wp_supershotgun: p->ammo[am_shell] = MAX(p->ammo[am_shell], 40); break;
+                case wp_missile: p->ammo[am_misl]  = MAX(p->ammo[am_misl], 20); break;
+                case wp_bfg: p->ammo[am_misl]  = MAX(p->ammo[am_misl], 40); break;
+                case wp_plasma: p->ammo[am_cell]  = MAX(p->ammo[am_cell], 40); break;
+#endif
+            }
+        }
+    }
+}
+
 void set_ap_player_states()
 {
     //G_PlayerReborn(consoleplayer); // This will reset the player completely (Nah, this crashes)
@@ -1261,21 +1290,7 @@ void G_Ticker (void)
 	    G_DoLoadLevel(); 
         set_ap_player_states();
         p = &players[consoleplayer];
-        for (i = 0; i < NUMWEAPONS; ++i)
-        {
-            p->weaponowned[i] = ap_state.player_state.weapon_owned[i];
-            if (p->weaponowned[i])
-            {
-                switch (i)
-                {
-                    case wp_pistol: p->ammo[am_clip] = MAX(p->ammo[am_clip], deh_initial_bullets); break;
-                    case wp_shotgun: p->ammo[am_shell] = MAX(p->ammo[am_shell], 30); break;
-                    case wp_missile: p->ammo[am_misl] = MAX(p->ammo[am_misl], 10); break;
-                    case wp_plasma: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
-                    case wp_bfg: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
-                }
-            }
-        }
+        ap_reborn_weapons(p);
         p->neghealth = p->health = deh_initial_health;
         if (p->mo) p->mo->health = p->health;
 	    break;
@@ -1743,21 +1758,7 @@ void on_spawn_ap_states()
 {
     set_ap_player_states();
     player_t* p = &players[consoleplayer];
-    for (int i = 0; i < NUMWEAPONS; ++i)
-    {
-        p->weaponowned[i] = ap_state.player_state.weapon_owned[i];
-        if (p->weaponowned[i])
-        {
-            switch (i)
-            {
-                case wp_pistol: p->ammo[am_clip] = MAX(p->ammo[am_clip], deh_initial_bullets); break;
-                case wp_shotgun: p->ammo[am_shell] = MAX(p->ammo[am_shell], 30); break;
-                case wp_missile: p->ammo[am_misl] = MAX(p->ammo[am_misl], 10); break;
-                case wp_plasma: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
-                case wp_bfg: p->ammo[am_cell] = MAX(p->ammo[am_cell], 150); break;
-            }
-        }
-    }
+    ap_reborn_weapons(p);
     p->neghealth = p->health = deh_initial_health;
     if (p->mo) p->mo->health = p->health;
     leveltimesinceload = MIN(leveltimesinceload, 175);
@@ -2673,8 +2674,10 @@ G_InitNew
   int		episode,
   int		map )
 {
-    ap_state.ep = episode;
-    ap_state.map = map;
+    // [AP PWAD]
+    ap_level_index_t idx = ap_make_level_index(episode, map);
+    ap_state.ep = idx.ep + 1;
+    ap_state.map = idx.map + 1;
 
     const char *skytexturename;
     int             i;

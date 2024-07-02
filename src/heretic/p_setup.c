@@ -28,7 +28,6 @@
 #include "s_sound.h"
 #include "p_extnodes.h"
 
-#include "apheretic_c_def.h"
 #include "apdoom.h"
 
 void P_SpawnMapThing(mapthing_t * mthing, int index);
@@ -984,7 +983,7 @@ void P_LoadThings(int lump)
         int type_before = spawnthing.type;
 
         // Replace AP locations with AP item
-        if (is_heretic_type_ap_location(spawnthing.type))
+        if (ap_is_location_type(spawnthing.type))
         {
             // Validate that the location index matches what we have in our data. If it doesn't then the WAD is not the same, we can't continue
             int ret = ap_validate_doom_location(ap_make_level_index(gameepisode, gamemap), spawnthing.type, i);

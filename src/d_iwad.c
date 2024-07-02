@@ -31,6 +31,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "apdoom.h"
+
 static const iwad_t iwads[] =
 {
     { "doom2.wad",    doom2,     commercial, "Doom II" },
@@ -872,6 +874,8 @@ char *D_TryFindWADByName(const char *filename)
 char *D_FindIWAD(int mask, GameMission_t *mission)
 {
     char *result;
+
+#if 0
     const char *iwadfile;
     int iwadparm;
     int i;
@@ -914,6 +918,20 @@ char *D_FindIWAD(int mask, GameMission_t *mission)
             result = SearchDirectoryForIWAD(iwad_dirs[i], mask, mission);
         }
     }
+#else
+    // [AP PWAD] IWADs are specified by JSON defs, load what is given to us
+    const char *iwad_name = ap_get_iwad_name();
+
+    if (iwad_name == NULL || strlen(iwad_name) == 0)
+        I_Error("Malformed game defs detected; no IWAD specified.");
+
+    result = D_FindWADByName(iwad_name);
+
+    if (result == NULL)
+        I_Error("IWAD file '%s' not found!", iwad_name);
+
+    *mission = IdentifyIWADByName(result, mask);
+#endif
 
     return result;
 }

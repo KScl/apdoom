@@ -45,8 +45,6 @@
 
 #include "p_extnodes.h" // [crispy] support extended node formats
 
-#include "apdoom_c_def.h"
-#include "apdoom2_c_def.h"
 #include "apdoom.h"
 
 void	P_SpawnMapThing (mapthing_t*	mthing, int index);
@@ -131,6 +129,72 @@ fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
     return r;
 }
 
+
+
+// [AP PWAD]
+// Functions for tweaking stuff after loading
+static void P_TweakSector(mapsector_t *sector, ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_SECTOR_SPECIAL:     sector->special = tweak->value;               break;
+        case TWEAK_SECTOR_TAG:         sector->tag = tweak->value;                   break;
+        case TWEAK_SECTOR_FLOOR_PIC:   memcpy(sector->floorpic, tweak->string, 8);   break;
+        case TWEAK_SECTOR_CEILING_PIC: memcpy(sector->ceilingpic, tweak->string, 8); break;
+        default: break;
+    }
+    printf("P_TweakSector: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
+
+static void P_TweakMapThing(mapthing_t *thing, ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_MAPTHING_X:     thing->x = tweak->value;     break;
+        case TWEAK_MAPTHING_Y:     thing->y = tweak->value;     break;
+        case TWEAK_MAPTHING_TYPE:  thing->type = tweak->value;  break;
+        case TWEAK_MAPTHING_ANGLE: thing->angle = tweak->value; break;
+        default: break;
+    }
+    printf("P_TweakMapThing: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
+
+static void P_TweakHub(mapthing_t *hub, ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_HUB_X: hub->x = tweak->value; break;
+        case TWEAK_HUB_Y: hub->y = tweak->value; break;
+        default: break;
+    }
+    printf("P_TweakHub: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
+
+static void P_TweakLinedef(maplinedef_t *linedef, ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_LINEDEF_SPECIAL: linedef->special = tweak->value; break;
+        case TWEAK_LINEDEF_TAG:     linedef->tag = tweak->value;     break;
+        case TWEAK_LINEDEF_FLAGS:   linedef->flags = tweak->value;   break;
+        default: break;
+    }
+    printf("P_TweakLinedef: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
+
+static void P_TweakSidedef(mapsidedef_t *sidedef, ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_SIDEDEF_LOWER:  memcpy(sidedef->bottomtexture, tweak->string, 8); break;
+        case TWEAK_SIDEDEF_MIDDLE: memcpy(sidedef->midtexture, tweak->string, 8);    break;
+        case TWEAK_SIDEDEF_UPPER:  memcpy(sidedef->toptexture, tweak->string, 8);    break;
+        case TWEAK_SIDEDEF_X:      sidedef->textureoffset = tweak->value;            break;
+        case TWEAK_SIDEDEF_Y:      sidedef->rowoffset = tweak->value;                break;
+        default: break;
+    }
+    printf("P_TweakSidedef: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
 
 
 
@@ -397,15 +461,43 @@ void P_LoadSectors (int lump)
 
     ms = (mapsector_t *)data;
 
+#if 1
+    // [AP] Alter sector data
+    {
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), SECTOR_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakSector(&ms[tweak->target], tweak);
+    }
+#else
     if (gamemode == commercial)
     {
+#if 0
         // Doom II
         if (gamemap == 12)
         {
             ms[132].tag = 42;
             sprintf(ms[132].floorpic, "STEP1");
         }
+#else
+        // STRAIN
+        if (gamemap == 10)
+        {
+            ms[92].tag = 0;
+            ms[93].tag = 0;
+            ms[94].tag = 0;
+            ms[95].tag = 0;
+            ms[101].tag = 0;
+        }
+        else if (gamemap == 16)
+        {
+            ms[59].tag = 690;
+            ms[134].tag = 690;
+        }
+#endif
     }
+#endif
 
     ss = sectors;
     for (i=0 ; i<numsectors ; i++, ss++, ms++)
@@ -1111,6 +1203,32 @@ void P_LoadThings (int lump)
     }
 	
     mt = (mapthing_t *)data;
+
+#if 1
+    // [AP] Alter mapthing data
+    {
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), MAPTHING_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakMapThing(&mt[tweak->target], tweak);
+    }
+#else
+    // STRAIN
+    if (gamemode == commercial)
+    {
+        if (gamemap == 2)
+        {
+            mt[433].y = -2024;
+        }
+        else if (gamemap == 12)
+        {
+            mt[342].x = 322;
+            mt[342].y = 736;
+        }
+    }
+#endif
+
     for (i=0 ; i<numthings ; i++, mt++)
     {
 	spawn = true;
@@ -1144,11 +1262,10 @@ void P_LoadThings (int lump)
 	spawnthing.type = SHORT(things_type_remap[i]);
 	spawnthing.options = SHORT(mt->options);
 	
-    auto type_before = spawnthing.type;
+    int type_before = spawnthing.type;
 
         // Replace AP locations with AP item
-        if ((gamemode != commercial && is_doom_type_ap_location(spawnthing.type)) ||
-            (gamemode == commercial && is_doom2_type_ap_location(spawnthing.type)))
+        if (ap_is_location_type(spawnthing.type))
         {
             // Validate that the location index matches what we have in our data. If it doesn't then the WAD is not the same, we can't continue
             int ret = ap_validate_doom_location(ap_make_level_index(gameepisode, gamemap), spawnthing.type, i);
@@ -1191,6 +1308,37 @@ void P_LoadThings (int lump)
 
     // [AP] Spawn level select teleport "HUB"
     spawnthing_player1_start.type = 20002;
+
+#if 1
+    // [AP PWAD] Alter hub data
+    {
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), HUB_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakHub(&spawnthing_player1_start, tweak);
+    }
+#else
+    // STRAIN
+    if (gamemode == commercial)
+    {
+        if (gamemap == 2)
+        {
+            spawnthing_player1_start.x = -320;
+            spawnthing_player1_start.y = -2304;
+        }
+        else if (gamemap == 5)
+        {
+            spawnthing_player1_start.x = -224;
+            spawnthing_player1_start.y = -184;
+        }
+        else if (gamemap == 7)
+        {
+            spawnthing_player1_start.x = -112;
+            spawnthing_player1_start.y = -2064;
+        }
+    }
+#endif
     P_SpawnMapThing(&spawnthing_player1_start, i);
 
     if (!deathmatch)
@@ -1232,9 +1380,18 @@ void P_LoadLineDefs (int lump)
     ld = lines;
     warn = warn2 = 0; // [crispy] warn about invalid linedefs
 
+#if 1
+    // [AP PWAD] Alter linedef data
+    {
+        ap_maptweak_t *tweak;
 
-
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), LINEDEF_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakLinedef(&mld[tweak->target], tweak);
+    }
+#else
     // [AP] If the multiworld was generacted with 2 way keydoors, we need to fix those doors to be 2 ways
+#if 0
     if (gamemode == commercial)
     {
         // Doom II
@@ -1271,8 +1428,37 @@ void P_LoadLineDefs (int lump)
         else if (gameepisode == 4 && gamemap == 8)
             mld[96].special = 61; // Stay open
     }
-
-
+#else
+    // STRAIN
+    if (gamemode == commercial)
+    {
+        if (gamemap == 2)
+        {
+            mld[845].special = 133;
+            mld[5].special = 0;
+        }
+        else if (gamemap == 10)
+        {
+            mld[678].special = 31;
+        }
+        else if (gamemap == 13)
+        {
+            mld[1520].special = 118;
+        }
+        else if (gamemap == 16)
+        {
+            mld[644].special = 62;
+            mld[645].special = 62;
+            mld[644].tag = 690;
+            mld[645].tag = 690;
+        }
+        else if (gamemap == 18)
+        {
+            mld[2502].special = 117;
+        }
+    }
+#endif
+#endif
 
     for (i=0 ; i<numlines ; i++, mld++, ld++)
     {
@@ -1415,8 +1601,19 @@ void P_LoadSideDefs (int lump)
 	
     msd = (mapsidedef_t *)data;
 
+#if 1
+    // [AP PWAD] Alter sidedef data
+    {
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), SIDEDEF_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakSidedef(&msd[tweak->target], tweak);
+    }
+#else
     if (gamemode == commercial)
     {
+#if 0
         // Doom II
         if (gamemap == 2)
         {
@@ -1428,7 +1625,16 @@ void P_LoadSideDefs (int lump)
             memcpy(msd[366].bottomtexture, "SUPPORT2", 8);
             memcpy(msd[316].bottomtexture, "SUPPORT2", 8);
         }
+#else
+        // STRAIN
+        if (gamemap == 2)
+        {
+            sprintf(msd[1329].midtexture, "%s", "DOORBLU");
+            sprintf(msd[1330].midtexture, "%s", "DOORBLU");
+        }
+#endif
     }
+#endif
 
     sd = sides;
     for (i=0 ; i<numsides ; i++, msd++, sd++)

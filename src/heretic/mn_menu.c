@@ -1214,7 +1214,7 @@ static void DrawOptions2Menu(void)
 void draw_apdoom_version(void)
 {
     const char* version_text = APDOOM_VERSION_FULL_TEXT;
-    auto len = strlen(APDOOM_VERSION_FULL_TEXT);
+    int len = strlen(APDOOM_VERSION_FULL_TEXT);
     int x = 0;
     for (int i = 0; i < len; ++i)
     {

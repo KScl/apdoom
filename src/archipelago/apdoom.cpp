@@ -25,14 +25,10 @@
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#define strnicmp strncasecmp
 #endif
 
 
-#include "apdoom_def.h"
-#include "apdoom2_def.h"
-#include "apheretic_def.h"
+#include "apdoom.h"
 #include "Archipelago.h"
 #include <json/json.h>
 #include <memory.h>
@@ -43,6 +39,8 @@
 #include <sstream>
 #include <set>
 
+// DEBUG
+#include <iostream>
 
 #if defined(_WIN32)
 static wchar_t *ConvertMultiByteToWide(const char *str, UINT code_page)
@@ -178,7 +176,7 @@ ap_state_t ap_state;
 int ap_is_in_game = 0;
 int ap_episode_count = -1;
 
-static ap_game_t ap_game;
+static ap_game_t ap_base_game;
 static int ap_weapon_count = -1;
 static int ap_ammo_count = -1;
 static int ap_powerup_count = -1;
@@ -193,7 +191,7 @@ static bool ap_initialized = false;
 static std::vector<std::string> ap_cached_messages;
 static std::string ap_save_dir_name;
 static std::vector<ap_notification_icon_t> ap_notification_icons;
-static bool ap_check_sanity = false;
+//static bool ap_check_sanity = false; // Unreferenced?
 
 
 void f_itemclr();
@@ -230,10 +228,569 @@ void load_state();
 void save_state();
 void APSend(std::string msg);
 
+// ===== PWAD SUPPORT =========================================================
+// All of these are loaded from json on game startup
+
+// The game name that gets passed to Archipelago when connecting.
+static std::string archipelago_game_name;
+
+// The name of the IWAD that this game definition requires
+static std::string iwad_name;
+
+// Every PWAD that needs to be loaded to play the given PWAD (includes APDOOM.WAD/APHERETIC.WAD)
+static std::vector<std::string> pwad_names;
+
+// Names of maps in the PWAD, because we need to keep a const char *pointer around for ap_level_info_t
+// Stored in a deque so we can quickly add a new name to the back, do back().c_str(), and never think about it again
+static std::deque<std::string> individual_map_names;
+
+// Stores the name of a lump into a 9-byte char array. Does nothing if src is not a string.
+static void store_lump_name(char *dest, Json::Value src)
+{
+	if (!src.isString())
+		return;
+
+	strncpy(dest, src.asCString(), 8);
+	dest[8] = 0;
+}
+
+// ----------------------------------------------------------------------------
+// Definitions for each level select screen, made generic.
+// See ap_levelselect_t in apdoom.h for a lot more detailed information about this.
+static std::vector<ap_levelselect_t> level_select_screens;
+
+// Parses one mapinfo structure from a JSON blob, while taking care to not overwrite
+// any default options that may have already been set.
+static void json_parse_single_mapinfo(ap_levelselect_map_t *info, const Json::Value json)
+{
+	info->x = json.get("x", info->x).asInt();
+	info->y = json.get("y", info->y).asInt();
+
+	if (!json["cursor"].isNull())
+	{
+		store_lump_name(info->cursor.graphic, json["cursor"]["graphic"]);
+		info->cursor.x = json["cursor"].get("x", info->cursor.x).asInt();
+		info->cursor.y = json["cursor"].get("y", info->cursor.y).asInt();
+	}
+
+	if (!json["image"].isNull())
+	{
+		store_lump_name(info->image.graphic, json["image"]["graphic"]);
+		info->image.x = json["image"].get("x", info->image.x).asInt();
+		info->image.y = json["image"].get("y", info->image.y).asInt();
+	}
+
+	if (!json["keys"].isNull())
+	{
+		if (!json["keys"]["relative_to"].isNull())
+		{
+			std::string result = json["keys"]["relative_to"].asString();
+			if (result == "map")              info->keys.relative_to = 0;
+			else if (result == "image")       info->keys.relative_to = 1;
+			else if (result == "image-right") info->keys.relative_to = 2;
+		}
+		info->keys.x = json["keys"].get("x", info->keys.x).asInt();
+		info->keys.y = json["keys"].get("y", info->keys.y).asInt();
+		info->keys.spacing_x = json["keys"].get("spacing_x", info->keys.spacing_x).asInt();
+		info->keys.spacing_y = json["keys"].get("spacing_y", info->keys.spacing_y).asInt();
+		info->keys.checkmark_x = json["keys"].get("checkmark_x", info->keys.checkmark_x).asInt();
+		info->keys.checkmark_y = json["keys"].get("checkmark_y", info->keys.checkmark_y).asInt();		
+		info->keys.use_checkmark = json["keys"].get("use_checkmark", info->keys.use_checkmark).asBool();
+	}
+
+	if (!json["checks"].isNull())
+	{
+		if (!json["checks"]["relative_to"].isNull())
+		{
+			std::string result = json["checks"]["relative_to"].asString();
+			if (result == "map")              info->checks.relative_to = 0;
+			else if (result == "image")       info->checks.relative_to = 1;
+			else if (result == "image-right") info->checks.relative_to = 2;
+			else if (result == "keys")        info->checks.relative_to = 3;
+			else if (result == "keys-last")   info->checks.relative_to = 4;
+		}
+		info->checks.x = json["checks"].get("x", info->checks.x).asInt();
+		info->checks.y = json["checks"].get("y", info->checks.y).asInt();
+	}
+}
+
+static int json_parse_level_select(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'level_select'.\n");
+		return 0;
+	}
+
+	// Defaults for level select mapinfo, if not specified anywhere else.
+	char default_map_image[9] = "INTERPIC";
+	ap_levelselect_map_t default_mapinfo;
+	memset(&default_mapinfo, 0, sizeof(ap_levelselect_map_t));
+
+	// Specifying defaults?
+	if (!json["defaults"].isNull())
+	{
+		json_parse_single_mapinfo(&default_mapinfo, json["defaults"]["maps"]);
+		store_lump_name(default_map_image, json["defaults"]["background_image"]);
+	}
+
+	const int ep_count = (int)json["episodes"].size();
+	level_select_screens.resize(ep_count);
+
+	for (int idx = 0; idx < ep_count; ++idx)
+	{
+		Json::Value episode_defs = json["episodes"][idx];
+
+		if (!episode_defs["background_image"].isNull())
+			store_lump_name(level_select_screens[idx].background_image, episode_defs["background_image"]);
+		else
+			memcpy(level_select_screens[idx].background_image, default_map_image, 9);
+
+		const int map_count = (int)episode_defs["maps"].size();
+		for (int map_idx = 0; map_idx < map_count; ++map_idx)
+		{
+			memcpy(&level_select_screens[idx].map_info[map_idx], &default_mapinfo, sizeof(ap_levelselect_map_t));
+			json_parse_single_mapinfo(&level_select_screens[idx].map_info[map_idx], episode_defs["maps"][map_idx]);
+		}
+	}
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// Tweaks that we make for each map, to remove softlocks and improve AP experiences.
+// <episode, <map, <tweaks>>>
+static std::map<int, std::map<int, std::vector<ap_maptweak_t>>> map_tweak_list;
+
+static ap_level_index_t get_index_from_map_name(std::string lump_name)
+{
+	int game_ep = 0;
+	int game_map = std::stoi(lump_name.substr(3));
+
+	if (!lump_name.compare(0, 3, "MAP"))
+		game_ep = 1;
+	else if (lump_name[0] == 'E' && lump_name[2] == 'M')
+		game_ep = (lump_name[1] - '0');
+	else
+		return {-1, -1};
+
+	return ap_make_level_index(game_ep, game_map);
+}
+
+static void insert_new_tweak(std::vector<ap_maptweak_t> &tweak_list, allowed_tweaks_t type, int target, Json::Value value)
+{
+	if (value.isNull())
+		return;
+
+	ap_maptweak_t new_tweak = {type, target, 0, ""};
+	if (value.isString())
+		store_lump_name(new_tweak.string, value);
+	else if (value.isInt())
+		new_tweak.value = value.asInt();
+	else if (value.isBool())
+		new_tweak.value = value.asBool();
+
+	tweak_list.emplace_back(new_tweak);
+}
+
+static void parse_hub_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	// There's only one thing that can be tweaked with the hub, so the target is ignored
+	insert_new_tweak(tweak_list, TWEAK_HUB_X, 0, json["x"]);
+	insert_new_tweak(tweak_list, TWEAK_HUB_Y, 0, json["y"]);	
+}
+
+static void parse_things_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	for (std::string &key_target : json.getMemberNames())
+	{
+		const int target = std::stoi(key_target);
+		insert_new_tweak(tweak_list, TWEAK_MAPTHING_X,     target, json[key_target]["x"]);
+		insert_new_tweak(tweak_list, TWEAK_MAPTHING_Y,     target, json[key_target]["y"]);
+		insert_new_tweak(tweak_list, TWEAK_MAPTHING_TYPE,  target, json[key_target]["type"]);
+		insert_new_tweak(tweak_list, TWEAK_MAPTHING_ANGLE, target, json[key_target]["angle"]);
+	}
+}
+
+static void parse_sectors_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	for (std::string &key_target : json.getMemberNames())
+	{
+		const int target = std::stoi(key_target);
+		insert_new_tweak(tweak_list, TWEAK_SECTOR_SPECIAL,     target, json[key_target]["special"]);
+		insert_new_tweak(tweak_list, TWEAK_SECTOR_TAG,         target, json[key_target]["tag"]);
+		insert_new_tweak(tweak_list, TWEAK_SECTOR_FLOOR_PIC,   target, json[key_target]["floor_pic"]);
+		insert_new_tweak(tweak_list, TWEAK_SECTOR_CEILING_PIC, target, json[key_target]["ceiling_pic"]);
+	}
+}
+
+static void parse_linedefs_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	for (std::string &key_target : json.getMemberNames())
+	{
+		const int target = std::stoi(key_target);
+		insert_new_tweak(tweak_list, TWEAK_LINEDEF_SPECIAL, target, json[key_target]["special"]);
+		insert_new_tweak(tweak_list, TWEAK_LINEDEF_TAG,     target, json[key_target]["tag"]);
+		insert_new_tweak(tweak_list, TWEAK_LINEDEF_FLAGS,   target, json[key_target]["flags"]);
+	}
+}
+
+static void parse_sidedefs_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	for (std::string &key_target : json.getMemberNames())
+	{
+		const int target = std::stoi(key_target);
+		insert_new_tweak(tweak_list, TWEAK_SIDEDEF_LOWER,  target, json[key_target]["lower"]);
+		insert_new_tweak(tweak_list, TWEAK_SIDEDEF_MIDDLE, target, json[key_target]["middle"]);
+		insert_new_tweak(tweak_list, TWEAK_SIDEDEF_UPPER,  target, json[key_target]["upper"]);
+		insert_new_tweak(tweak_list, TWEAK_SIDEDEF_X,      target, json[key_target]["x"]);
+		insert_new_tweak(tweak_list, TWEAK_SIDEDEF_Y,      target, json[key_target]["y"]);
+	}
+}
+
+static int json_parse_map_tweaks(Json::Value json)
+{
+	if (json.isNull())
+		return 1; // Optional
+
+	for (std::string &map_lump_name : json.getMemberNames())
+	{
+		ap_level_index_t idx = get_index_from_map_name(map_lump_name);
+		if (idx.ep == -1)
+		{
+			printf("APDOOM: 'map_tweaks' contains invalid map name '%s'.\n", map_lump_name.c_str());
+			return 0;
+		}
+
+		map_tweak_list.insert({idx.ep, {}});
+		map_tweak_list[idx.ep].insert({idx.map, {}});
+
+		for (std::string &tweak_type : json[map_lump_name].getMemberNames())
+		{
+			if (tweak_type == "hub")
+				parse_hub_tweak_block(json[map_lump_name]["hub"], map_tweak_list[idx.ep][idx.map]);
+			else if (tweak_type == "things")
+				parse_things_tweak_block(json[map_lump_name]["things"], map_tweak_list[idx.ep][idx.map]);
+			else if (tweak_type == "sectors")
+				parse_sectors_tweak_block(json[map_lump_name]["sectors"], map_tweak_list[idx.ep][idx.map]);
+			else if (tweak_type == "linedefs")
+				parse_linedefs_tweak_block(json[map_lump_name]["linedefs"], map_tweak_list[idx.ep][idx.map]);
+			else if (tweak_type == "sidedefs")
+				parse_sidedefs_tweak_block(json[map_lump_name]["sidedefs"], map_tweak_list[idx.ep][idx.map]);
+			else
+				printf("APDOOM: Unknown tweak type '%s', ignoring\n", tweak_type.c_str());
+		}
+	}
+
+	for (auto &it_ep : map_tweak_list)
+	{
+		for (auto &it_map : it_ep.second)
+		{
+			for (ap_maptweak_t &it : it_map.second)
+			{
+				printf("(%i, %i): [%02x] %i %i %s\n", it_ep.first, it_map.first, it.type, it.target, it.value, it.string);
+			}
+		}
+	}
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// outer vector is episode, inner is map
+static std::vector<std::vector<ap_level_info_t>> preloaded_level_info;
+
+static int json_parse_level_info(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'level_info'.\n");
+		return 0;
+	}
+
+	const int episode_count = (int)json.size();
+	preloaded_level_info.resize(episode_count);
+
+	ap_level_info_t new_level;
+	for (int ep = 0; ep < episode_count; ++ep)
+	{
+		const int map_count = (int)json[ep].size();
+		preloaded_level_info[ep].resize(map_count);
+
+		for (int map = 0; map < map_count; ++map)
+		{
+			Json::Value map_info = json[ep][map];
+
+			individual_map_names.emplace_back(map_info["_name"].asString());
+			new_level.name = individual_map_names.back().c_str();
+
+			new_level.game_episode = map_info["game_map"][0].asInt();
+			new_level.game_map = map_info["game_map"][1].asInt();
+			new_level.keys[0] = map_info["key"][0].asBool();
+			new_level.keys[1] = map_info["key"][1].asBool();
+			new_level.keys[2] = map_info["key"][2].asBool();
+			new_level.use_skull[0] = map_info["use_skull"][0].asBool();
+			new_level.use_skull[1] = map_info["use_skull"][1].asBool();
+			new_level.use_skull[2] = map_info["use_skull"][2].asBool();
+
+			// These used to be stored in the structures, but are now recalculated as we load.
+			new_level.thing_count = map_info["thing_list"].size();
+			new_level.check_count = 0;
+			new_level.sanity_check_count = 0;
+
+			if (new_level.thing_count > AP_MAX_THING)
+			{
+				printf("APDOOM: %s: Too many things! The max is %i\n", new_level.name, AP_MAX_THING);
+				return 0;
+			}
+
+			Json::Value map_things = map_info["thing_list"];
+			for (int idx = 0; idx < new_level.thing_count; ++idx)
+			{
+				new_level.thing_infos[idx].index = idx;
+				if (map_things[idx].isInt())
+				{
+					// Things which are not AP items are only stored as their doomednum.
+					new_level.thing_infos[idx].doom_type = map_things[idx].asInt();
+					new_level.thing_infos[idx].check_sanity = false;
+					new_level.thing_infos[idx].unreachable = true;
+				}
+				else
+				{
+					// Things which _are_ AP items are stored as an array.
+					// [0] is the doomednum, [1] is the checksanity boolean.
+					new_level.thing_infos[idx].doom_type = map_things[idx][0].asInt();
+					new_level.thing_infos[idx].check_sanity = map_things[idx][1].asBool();
+					new_level.thing_infos[idx].unreachable = false;
+					++new_level.check_count;
+					// sanity_check_count was always handled later, anyway.
+				}
+			}
+
+			// Copy structure into our vector
+			preloaded_level_info[ep][map] = new_level;
+		}
+	}
+	return 1;
+}
+
+
+// ----------------------------------------------------------------------------
+// <doomednum>
+static std::set<int> preloaded_location_types;
+
+static int json_parse_location_types(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'location_types'.\n");
+		return 0;
+	}
+
+	for (auto &doomednum : json)
+		preloaded_location_types.emplace(doomednum.asInt());
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// <episode, <map, <index, ap-location-num>>> 
+static std::map<int, std::map<int, std::map<int, int64_t>>> preloaded_location_table;
+
+static int json_parse_location_table(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'location_table'.\n");
+		return 0;
+	}
+
+	for (std::string &key_episode : json.getMemberNames())
+	{
+		const int episode_num = std::stoi(key_episode);
+		preloaded_location_table.insert({episode_num, {}});
+
+		for (std::string &key_map : json[key_episode].getMemberNames())
+		{
+			const int map_num = std::stoi(key_map);
+			preloaded_location_table[episode_num].insert({map_num, {}});
+
+			Json::Value items_in_map = json[key_episode][key_map];
+			for (std::string &key_item_idx : items_in_map.getMemberNames())
+			{
+				const int item_idx = std::stoi(key_item_idx);
+				const int64_t ap_item_id = items_in_map[key_item_idx].asInt64();
+				preloaded_location_table[episode_num][map_num].insert({item_idx, ap_item_id});
+			}
+		}
+	}
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// <ap-item-num, <doomednum, episode, map>>
+static std::map<int64_t, ap_item_t> preloaded_item_table;
+
+static int json_parse_item_table(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'item_table'.\n");
+		return 0;
+	}
+
+	for (std::string &json_key : json.getMemberNames())
+	{
+		const int64_t ap_item_id = std::stoll(json_key);
+
+		Json::Value json_value = json[json_key];
+		const int doomednum = json_value[0].asInt();
+		const int ep = json_value.get(1, -1).asInt();
+		const int map = json_value.get(2, -1).asInt();
+
+		preloaded_item_table.insert({ap_item_id, {doomednum, ep, map}});
+	}	
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// <doomednum, sprite-lump-name>
+static std::map<int, std::string> preloaded_type_sprites;
+
+static int json_parse_type_sprites(Json::Value json)
+{
+	if (json.isNull())
+	{
+		printf("APDOOM: Definitions missing required 'type_sprites'.\n");
+		return 0;
+	}
+
+	for (std::string &json_key : json.getMemberNames())
+	{
+		const int doomednum = std::stoi(json_key);
+		preloaded_type_sprites.insert({doomednum, json[json_key].asString()});
+	}
+	return 1;
+}
+
+// ----------------------------------------------------------------------------
+
+// Returns positive on successful load, 0 for failure.
+int ap_preload_defs_for_game(const char *game_name)
+{
+	std::string filename = std::string("defs/") + game_name + std::string(".json");
+	std::ifstream f(filename);
+	if (!f.is_open())
+	{
+		printf("APDOOM: Can't find a definitions file for \"%s\" in the \"defs\" folder\n", game_name);
+		return 0;
+	}
+
+	Json::Value defs_json;
+	f >> defs_json;
+	f.close();
+
+	archipelago_game_name = defs_json["_game_name"].asString();
+
+	// Recognize supported IWADs, and set up game info for them automatically.
+	iwad_name = defs_json["_iwad"].asString();
+	if (iwad_name == "HERETIC.WAD")
+		ap_base_game = ap_game_t::heretic;
+	else if (iwad_name == "DOOM.WAD" || iwad_name == "CHEX.WAD")
+		ap_base_game = ap_game_t::doom;
+	else // All others are Doom 2 based, I think?
+		ap_base_game = ap_game_t::doom2;
+
+	// Track PWADs that we need to force load later, if this is a PWAD game def.
+	if (!defs_json["_pwads"].isNull())
+	{
+		for (auto &pwad : defs_json["_pwads"])
+			pwad_names.emplace_back(pwad.asString());
+	}
+
+	// Load location type table (used to determine which items are AP items)
+	if (!json_parse_location_types(defs_json["ap_location_types"]))
+		return 0;
+	if (!json_parse_type_sprites(defs_json["type_sprites"]))
+		return 0;
+	if (!json_parse_item_table(defs_json["item_table"]))
+		return 0;
+	if (!json_parse_location_table(defs_json["location_table"]))
+		return 0;
+	if (!json_parse_level_info(defs_json["level_info"]))
+		return 0;
+	if (!json_parse_map_tweaks(defs_json["map_tweaks"]))
+		return 0;
+	if (!json_parse_level_select(defs_json["level_select"]))
+		return 0;
+
+	return 1;
+} 
+
+// Returns the name of the IWAD to load.
+const char *ap_get_iwad_name()
+{
+	return iwad_name.c_str();
+}
+
+// Returns an array of all PWADs to load, ending with "-".
+const char *ap_get_pwad_name(unsigned int id)
+{
+	if (id >= pwad_names.size())
+		return NULL;
+	return pwad_names[id].c_str();
+}
+
+int ap_is_location_type(int doom_type)
+{
+	return preloaded_location_types.count(doom_type);
+}
+
+
+ap_levelselect_t *ap_get_level_select_info(unsigned int ep)
+{
+	if (ep >= level_select_screens.size())
+		return NULL;
+	return &level_select_screens[ep];
+}
+
+// ----------------------------------------------------------------------------
+
+// These are used to do iteration with ap_get_map_tweaks
+static ap_level_index_t gmt_level;
+static allowed_tweaks_t gmt_type_mask;
+static unsigned int gmt_i;
+
+void ap_init_map_tweaks(ap_level_index_t idx, allowed_tweaks_t type_mask)
+{
+	gmt_i = 0;
+	gmt_level.ep = idx.ep;
+	gmt_level.map = idx.map;
+	gmt_type_mask = type_mask;
+}
+
+ap_maptweak_t *ap_get_map_tweaks()
+{
+	// If map isn't present (has no tweaks), do nothing.
+	if (map_tweak_list.count(gmt_level.ep) == 0
+		|| map_tweak_list[gmt_level.ep].count(gmt_level.map) == 0)
+	{
+		return NULL;		
+	}
+
+	std::vector<ap_maptweak_t> &tweak_list = map_tweak_list[gmt_level.ep][gmt_level.map];
+	while (gmt_i < tweak_list.size())
+	{
+		ap_maptweak_t *tweak = &tweak_list[gmt_i++];
+		if ((tweak->type & TWEAK_TYPE_MASK) != gmt_type_mask)
+			continue;
+		return tweak;
+	}
+	return NULL;
+}
+
+// ============================================================================
 
 static int get_original_music_for_level(int ep, int map)
 {
-	switch (ap_game)
+	switch (ap_base_game)
 	{
 		case ap_game_t::doom:
 		{
@@ -268,15 +825,19 @@ static int get_original_music_for_level(int ep, int map)
 	return -1;
 }
 
-
 static std::vector<std::vector<ap_level_info_t>>& get_level_info_table()
 {
-	switch (ap_game)
+#if 1
+	return preloaded_level_info;
+#else
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return ap_doom_level_infos;
 		case ap_game_t::doom2: return ap_doom2_level_infos;
 		case ap_game_t::heretic: return ap_heretic_level_infos;
 	}
+#endif
 }
 
 
@@ -306,23 +867,33 @@ ap_level_state_t* ap_get_level_state(ap_level_index_t idx)
 
 static const std::map<int64_t, ap_item_t>& get_item_type_table()
 {
-	switch (ap_game)
+#if 1
+	return preloaded_item_table;
+#else
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return ap_doom_item_table;
 		case ap_game_t::doom2: return ap_doom2_item_table;
 		case ap_game_t::heretic: return ap_heretic_item_table;
 	}
+#endif
 }
 
 
 static const std::map<int /* ep */, std::map<int /* map */, std::map<int /* index */, int64_t /* loc id */>>>& get_location_table()
 {
-	switch (ap_game)
+#if 1
+	return preloaded_location_table;
+#else
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return ap_doom_location_table;
 		case ap_game_t::doom2: return ap_doom2_location_table;
 		case ap_game_t::heretic: return ap_heretic_location_table;
 	}
+#endif
 }
 
 
@@ -354,7 +925,7 @@ static unsigned long long hash_seed(const char *str)
     unsigned long long hash = 5381;
     int c;
 
-    while (c = *str++)
+    while ((c = *str++))
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
     return hash;
@@ -363,8 +934,9 @@ static unsigned long long hash_seed(const char *str)
 
 const int* get_default_max_ammos()
 {
-	switch (ap_game)
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return doom_max_ammos;
 		case ap_game_t::doom2: return doom2_max_ammos;
 		case ap_game_t::heretic: return heretic_max_ammos;
@@ -398,34 +970,20 @@ int apdoom_init(ap_settings_t* settings)
 	ap_notification_icons.reserve(4096); // 1MB. A bit exessive, but I got a crash with invalid strings and I cannot figure out why. Let's not take any chances...
 	memset(&ap_state, 0, sizeof(ap_state));
 
-	if (strcmp(settings->game, "DOOM 1993") == 0)
+	settings->game = archipelago_game_name.c_str();
+	if (ap_base_game == ap_game_t::heretic)
 	{
-		ap_game = ap_game_t::doom;
-		ap_weapon_count = 9;
-		ap_ammo_count = 4;
-		ap_powerup_count = 6;
-		ap_inventory_count = 0;
-	}
-	else if (strcmp(settings->game, "DOOM II") == 0)
-	{
-		ap_game = ap_game_t::doom2;
-		ap_weapon_count = 9;
-		ap_ammo_count = 4;
-		ap_powerup_count = 6;
-		ap_inventory_count = 0;
-	}
-	else if (strcmp(settings->game, "Heretic") == 0)
-	{
-		ap_game = ap_game_t::heretic;
 		ap_weapon_count = 9;
 		ap_ammo_count = 6;
 		ap_powerup_count = 9;
 		ap_inventory_count = 14;
 	}
-	else
+	else // Doom or Doom 2, both use the same variables here
 	{
-		printf("APDOOM: Invalid game: %s\n", settings->game);
-		return 0;
+		ap_weapon_count = 9;
+		ap_ammo_count = 4;
+		ap_powerup_count = 6;
+		ap_inventory_count = 0;
 	}
 
 	const auto& level_info_table = get_level_info_table();
@@ -573,9 +1131,14 @@ int apdoom_init(ap_settings_t* settings)
 					printf("    %s = %s:\n", kv.first.c_str(), kv.second.c_str());
 				printf("  Seed name: %s\n", ap_room_info.seed_name.c_str());
 				printf("  Time: %f\n", ap_room_info.time);
-				
+
 				ap_was_connected = true;
-				ap_save_dir_name = "AP_" + ap_room_info.seed_name + "_" + string_to_hex(ap_settings.player_name);
+
+				std::string this_game_save_folder = "AP_" + ap_room_info.seed_name + "_" + string_to_hex(ap_settings.player_name);
+				if (ap_settings.save_dir != NULL)
+					ap_save_dir_name = std::string(ap_settings.save_dir) + "/" + this_game_save_folder;
+				else
+					ap_save_dir_name = this_game_save_folder;
 
 				// Create a directory where saves will go for this AP seed.
 				printf("APDOOM: Save directory: %s\n", ap_save_dir_name.c_str());
@@ -585,6 +1148,9 @@ int apdoom_init(ap_settings_t* settings)
 					AP_MakeDirectory(ap_save_dir_name.c_str());
 				}
 
+				// Make sure that ammo starts at correct base values no matter what
+				recalc_max_ammo();
+
 				load_state();
 				should_break = true;
 				break;
@@ -592,6 +1158,8 @@ int apdoom_init(ap_settings_t* settings)
 			case AP_ConnectionStatus::ConnectionRefused:
 				printf("APDOOM: Failed to connect, connection refused\n");
 				return 0;
+			default: // Explicitly do not handle
+				break;
 		}
 		if (should_break) break;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -677,7 +1245,7 @@ int apdoom_init(ap_settings_t* settings)
 					music_pool.erase(music_pool.begin() + rnd);
 					ap_state.level_states[ep * max_map_count + map].music = mus;
 
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 							printf("  E%iM%i = E%iM%i\n", ep + 1, map + 1, ((mus - 1) / max_map_count) + 1, ((mus - 1) % max_map_count) + 1);
@@ -709,11 +1277,13 @@ int apdoom_init(ap_settings_t* settings)
 				for (const auto& kv3 : kv2.second)
 				{
 					if (kv3.first == -1) continue;
+#if 0 // Was this used to debug something in the past? Either way, it does nothing anymore
 					if (kv3.second == 371349)
 					{
 						int tmp;
 						tmp = 5;
 					}
+#endif
 					if (validate_doom_location({kv1.first - 1, kv2.first - 1}, kv3.first))
 					{
 						location_scouts.push_back(kv3.second);
@@ -744,7 +1314,6 @@ int apdoom_init(ap_settings_t* settings)
 		printf("APDOOM: Scout locations cached loaded\n");
 	}
 	
-	recalc_max_ammo();
 	printf("APDOOM: Initialized\n");
 	ap_initialized = true;
 	return 1;
@@ -864,7 +1433,13 @@ void load_state()
 	for (int i = 0; i < ap_weapon_count; ++i)
 		json_get_bool_or(json["player"]["weapon_owned"][i], ap_state.player_state.weapon_owned[i]);
 	for (int i = 0; i < ap_ammo_count; ++i)
+	{
 		json_get_int(json["player"]["ammo"][i], ap_state.player_state.ammo[i]);
+
+		// This will get overwritten later,
+		// but it must be saved if the player is in game before all their items have been re-received.
+		json_get_int(json["player"]["max_ammo"][i], ap_state.player_state.max_ammo[i]);		
+	}
 	for (int i = 0; i < ap_inventory_count; ++i)
 	{
 		const auto& inventory_slot = json["player"]["inventory"][i];
@@ -890,7 +1465,9 @@ void load_state()
 			printf("      %s\n", get_weapon_name(i));
 	printf("    Ammo:\n");
 	for (int i = 0; i < ap_ammo_count; ++i)
-		printf("      %s = %i\n", get_ammo_name(i), ap_state.player_state.ammo[i]);
+		printf("      %s = %i / %i\n", get_ammo_name(i),
+			ap_state.player_state.ammo[i],
+			ap_state.player_state.max_ammo[i]);
 
 	// Level states
 	for (int i = 0; i < ap_episode_count; ++i)
@@ -927,12 +1504,12 @@ void load_state()
 	int first = 1;
 	for (int i = 0; i < ap_episode_count; ++i)
 	{
-		json_get_int(json["enabled_episodes"][i++], ap_state.episodes[i]);
+		json_get_int(json["enabled_episodes"][i], ap_state.episodes[i]);
 		if (ap_state.episodes[i])
 		{
 			if (!first) printf(", ");
 			first = 0;
-			printf("%i", i);
+			printf("%i", i + 1);
 		}
 	}
 	printf("\n");
@@ -1034,6 +1611,11 @@ void save_state()
 		json_ammo.append(ap_state.player_state.ammo[i]);
 	json_player["ammo"] = json_ammo;
 
+	Json::Value json_max_ammo(Json::arrayValue);
+	for (int i = 0; i < ap_ammo_count; ++i)
+		json_max_ammo.append(ap_state.player_state.max_ammo[i]);
+	json_player["max_ammo"] = json_max_ammo;
+
 	Json::Value json_inventory(Json::arrayValue);
 	for (int i = 0; i < ap_inventory_count; ++i)
 	{
@@ -1072,7 +1654,7 @@ void save_state()
 
 	json["ep"] = ap_state.ep;
 	for (int i = 0; i < ap_episode_count; ++i)
-		json["enabled_episodes"][i++] = ap_state.episodes[i] ? true : false;
+		json["enabled_episodes"][i] = ap_state.episodes[i] ? true : false;
 	json["map"] = ap_state.map;
 
 	// Progression items (So we don't scout everytime we connect)
@@ -1102,8 +1684,9 @@ static const std::map<int, int> heretic_keys_map = {{80, 0}, {73, 1}, {79, 2}};
 
 const std::map<int, int>& get_keys_map()
 {
-	switch (ap_game)
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return doom_keys_map;
 		case ap_game_t::doom2: return doom2_keys_map;
 		case ap_game_t::heretic: return heretic_keys_map;
@@ -1113,8 +1696,9 @@ const std::map<int, int>& get_keys_map()
 
 int get_map_doom_type()
 {
-	switch (ap_game)
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return 2026;
 		case ap_game_t::doom2: return 2026;
 		case ap_game_t::heretic: return 35;
@@ -1129,8 +1713,9 @@ static const std::map<int, int> heretic_weapons_map = {{2005, 7}, {2001, 2}, {53
 
 const std::map<int, int>& get_weapons_map()
 {
-	switch (ap_game)
+	switch (ap_base_game)
 	{
+		default: // (Indeterminate state?)
 		case ap_game_t::doom: return doom_weapons_map;
 		case ap_game_t::doom2: return doom2_weapons_map;
 		case ap_game_t::heretic: return heretic_weapons_map;
@@ -1140,12 +1725,16 @@ const std::map<int, int>& get_weapons_map()
 
 const std::map<int, std::string>& get_sprites()
 {
-	switch (ap_game)
+#if 1
+	return preloaded_type_sprites;
+#else
+	switch (ap_base_game)
 	{
 		case ap_game_t::doom: return ap_doom_type_sprites;
 		case ap_game_t::doom2: return ap_doom2_type_sprites;
 		case ap_game_t::heretic: return ap_heretic_type_sprites;
 	}
+#endif
 }
 
 
@@ -1435,73 +2024,85 @@ void f_two_ways_keydoors(int two_ways_keydoors)
 
 void f_ammo1start(int ammo_amt)
 {
-	ap_state.max_ammo_start[0] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[0] = ammo_amt;
 }
 
 
 void f_ammo2start(int ammo_amt)
 {
-	ap_state.max_ammo_start[1] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[1] = ammo_amt;
 }
 
 
 void f_ammo3start(int ammo_amt)
 {
-	ap_state.max_ammo_start[2] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[2] = ammo_amt;
 }
 
 
 void f_ammo4start(int ammo_amt)
 {
-	ap_state.max_ammo_start[3] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[3] = ammo_amt;
 }
 
 
 void f_ammo5start(int ammo_amt)
 {
-	ap_state.max_ammo_start[4] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[4] = ammo_amt;
 }
 
 
 void f_ammo6start(int ammo_amt)
 {
-	ap_state.max_ammo_start[5] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_start[5] = ammo_amt;
 }
 
 
 void f_ammo1add(int ammo_amt)
 {
-	ap_state.max_ammo_add[0] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[0] = ammo_amt;
 }
 
 
 void f_ammo2add(int ammo_amt)
 {
-	ap_state.max_ammo_add[1] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[1] = ammo_amt;
 }
 
 
 void f_ammo3add(int ammo_amt)
 {
-	ap_state.max_ammo_add[2] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[2] = ammo_amt;
 }
 
 
 void f_ammo4add(int ammo_amt)
 {
-	ap_state.max_ammo_add[3] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[3] = ammo_amt;
 }
 
 
 void f_ammo5add(int ammo_amt)
 {
-	ap_state.max_ammo_add[4] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[4] = ammo_amt;
 }
 
 
 void f_ammo6add(int ammo_amt)
 {
-	ap_state.max_ammo_add[5] = ammo_amt;
+	if (ammo_amt > 0)
+		ap_state.max_ammo_add[5] = ammo_amt;
 }
 
 
@@ -1570,40 +2171,35 @@ void apdoom_complete_level(ap_level_index_t idx)
 }
 
 
-ap_level_index_t ap_make_level_index(int ep /* 1-based */, int map /* 1-based */)
+ap_level_index_t ap_make_level_index(int gameepisode, int gamemap)
 {
-	if (ap_game != ap_game_t::doom2) return { ep - 1, map - 1 };
-
-	// In Doom2, every map is ep = 1
-	ap_level_index_t ret = { 0, map - 1 };
+	// For PWAD support: Level info struct has gameepisode/gamemap, don't make assumptions
 	const auto& table = get_level_info_table();
-	while (ret.map >= (int)table[ret.ep].size())
+	for (int ep = 0; ep < (int)table.size(); ++ep)
 	{
-		ret.map -= (int)table[ret.ep].size();
-		ret.ep++;
+		for (int map = 0; map < (int)table[ep].size(); ++map)
+		{
+			if (table[ep][map].game_episode == gameepisode && table[ep][map].game_map == gamemap)
+				return {ep, map};
+		}
 	}
-
-	return ret;
+	// Requested level isn't in the level table; this will probably crash but whatever
+	printf("APDOOM: Episode %d, Map %d isn't in the Archipelago level table!\n", gameepisode, gamemap);
+	return {0, 0};
 }
 
 
 int ap_index_to_ep(ap_level_index_t idx)
 {
-	if (ap_game != ap_game_t::doom2) return idx.ep + 1;
-	return 1;
+	const auto& table = get_level_info_table();
+	return table[idx.ep][idx.map].game_episode;
 }
 
 
 int ap_index_to_map(ap_level_index_t idx)
 {
-	if (ap_game != ap_game_t::doom2) return idx.map + 1;
-
 	const auto& table = get_level_info_table();
-	for (int ep = 0; ep < idx.ep; ++ep)
-	{
-		idx.map += (int)table[ep].size();
-	}
-	return idx.map + 1;
+	return table[idx.ep][idx.map].game_map;
 }
 
 
@@ -1611,7 +2207,7 @@ void apdoom_check_victory()
 {
 	if (ap_state.victory) return;
 
-	if (ap_state.goal == 1 && (ap_game == ap_game_t::doom || ap_game == ap_game_t::heretic))
+	if (ap_state.goal == 1 && (ap_base_game == ap_game_t::doom || ap_base_game == ap_game_t::heretic))
 	{
 		for (int ep = 0; ep < ap_episode_count; ++ep)
 		{
@@ -1644,6 +2240,7 @@ void apdoom_check_victory()
 void apdoom_send_message(const char* msg)
 {
 	std::string smsg = msg;
+#if 0 // TODO This needs a major rework.
 	if (strnicmp(msg, "!hint ", 6) == 0)
 	{
 		// Make the hint easier.
@@ -1682,7 +2279,7 @@ void apdoom_send_message(const char* msg)
 				// Check what it's looking for. Computer area map? map scroll?
 				if (smsg.find("map") != std::string::npos || smsg.find("MAP") != std::string::npos)
 				{
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 						case ap_game_t::doom2:
@@ -1695,7 +2292,7 @@ void apdoom_send_message(const char* msg)
 				}
 				else if (smsg.find("blue") != std::string::npos || smsg.find("BLUE") != std::string::npos)
 				{
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 						case ap_game_t::doom2:
@@ -1708,7 +2305,7 @@ void apdoom_send_message(const char* msg)
 				}
 				else if (smsg.find("yellow") != std::string::npos || smsg.find("YELLOW") != std::string::npos)
 				{
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 						case ap_game_t::doom2:
@@ -1721,7 +2318,7 @@ void apdoom_send_message(const char* msg)
 				}
 				else if (smsg.find("red") != std::string::npos || smsg.find("RED") != std::string::npos)
 				{
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 						case ap_game_t::doom2:
@@ -1733,7 +2330,7 @@ void apdoom_send_message(const char* msg)
 				}
 				else if (smsg.find("green") != std::string::npos || smsg.find("GREEN") != std::string::npos)
 				{
-					switch (ap_game)
+					switch (ap_base_game)
 					{
 						case ap_game_t::doom:
 						case ap_game_t::doom2:
@@ -1748,6 +2345,7 @@ void apdoom_send_message(const char* msg)
 			}
 		}
 	}
+#endif
 
 	Json::Value say_packet;
 	say_packet[0]["cmd"] = "Say";

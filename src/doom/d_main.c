@@ -184,19 +184,8 @@ boolean P_GiveWeapon(player_t* player, weapontype_t weapon, boolean dropped);
 
 boolean is_in_level(int ep, int map)
 {
-    if (gamemode == commercial)
-    {
-        // AP items have "episodes" but the actual game does not
-        switch (ep)
-        {
-            case 2: return (map + 11) == gamemap;
-            case 3: return (map + 20) == gamemap;
-            case 4: return (map + 30) == gamemap;
-            default: return map == gamemap;
-        }
-    }
-    else
-        return ep == gameepisode && map == gamemap;
+    ap_level_index_t idx = { ep - 1, map - 1 };
+    return gameepisode == ap_index_to_ep(idx) && gamemap == ap_index_to_map(idx);
 }
 
 
@@ -1741,6 +1730,12 @@ void D_DoomMain (void)
     DEH_printf("Z_Init: Init zone memory allocation daemon. \n");
     Z_Init ();
 
+    int apsavedir_id = M_CheckParmWithArgs("-apsavedir", 1);
+    if (apsavedir_id)
+    {
+        ap_settings.save_dir = myargv[apsavedir_id + 1];
+        M_MakeDirectory(ap_settings.save_dir);
+    }
 
     int monster_rando_id = M_CheckParmWithArgs("-apmonsterrando", 1);
     if (monster_rando_id)
@@ -1784,7 +1779,7 @@ void D_DoomMain (void)
     // Grab parameters for AP
     int apserver_arg_id = M_CheckParmWithArgs("-apserver", 1);
     if (!apserver_arg_id)
-	    I_Error("Make sure to launch the game using APDoomLauncher.exe.\nThe '-apserver' parameter requires an argument.");
+	    I_Error("Required command line arguments are missing.\nThe '-apserver' parameter requires an argument.");
     ap_settings.ip = myargv[apserver_arg_id + 1];
 
     int player_is_hex = 0;
@@ -1794,7 +1789,7 @@ void D_DoomMain (void)
         applayer_arg_id = M_CheckParmWithArgs("-applayerhex", 1);
         if (!applayer_arg_id)
         {
-	        I_Error("Make sure to launch the game using APDoomLauncher.exe.\nThe '-applayer' parameter requires an argument.");
+	        I_Error("Required command line arguments are missing.\nThe '-applayer' parameter requires an argument.");
         }
         player_is_hex = 1;
     }
@@ -1804,19 +1799,22 @@ void D_DoomMain (void)
     {
         int password_arg_id = M_CheckParmWithArgs("-password", 1);
         if (!password_arg_id)
-	        I_Error("Make sure to launch the game using APDoomLauncher.exe.\nThe '-password' parameter requires an argument.");
+	        I_Error("Required command line arguments are missing.\nThe '-password' parameter requires an argument.");
         password = myargv[password_arg_id + 1];
     }
 
-    GameMission_t mission = doom;
-    if (M_CheckParm("-game"))
+    // [AP PWAD] Change -game to be required
+    if (!M_CheckParm("-game"))
+        I_Error("Required command line arguments are missing.\nThe '-game' parameter requires an argument.");
+    else
     {
         int game_arg_id = M_CheckParmWithArgs("-game", 1);
         if (!game_arg_id)
-	        I_Error("Make sure to launch the game using APDoomLauncher.exe.\nThe '-game' parameter requires an argument.");
+	        I_Error("Required command line arguments are missing.\nThe '-game' parameter requires an argument.");
+
         const char* game_name = myargv[game_arg_id + 1];
-        if (strcmp(game_name, "doom") == 0) mission = doom;
-        if (strcmp(game_name, "doom2") == 0) mission = doom2;
+        if (!ap_preload_defs_for_game(game_name))
+            I_Error("Failed to initialize Archipelago.");
     }
 
     //!
@@ -2016,15 +2014,6 @@ void D_DoomMain (void)
 
     // Find main IWAD file and load it.
     int iwad_mask = IWAD_MASK_DOOM;
-    if (M_CheckParm("-game"))
-    {
-        int game_arg_id = M_CheckParmWithArgs("-game", 1);
-        if (!game_arg_id)
-	        I_Error("Make sure to launch the game using APDoomLauncher.exe.\nThe '-game' parameter requires an argument.");
-        const char* game_name = myargv[game_arg_id + 1];
-        if (strcmp(game_name, "doom") == 0) iwad_mask = 1 << doom; // Remove doom2
-        if (strcmp(game_name, "doom2") == 0) iwad_mask = 1 << doom2; // Remove doom
-    }
     iwadfile = D_FindIWAD(iwad_mask, &gamemission);
 
     // None found?
@@ -2182,11 +2171,11 @@ void D_DoomMain (void)
     //  3. PWAD dehacked patches in DEHACKED lumps.
     DEH_ParseCommandLine();
 
-    // Always merge Archipelago WAD
-    W_MergeFile("APDOOM.WAD");
+    // Load PWAD files required to play the specified game.
+    modifiedgame = W_ParseAPDefinitions();
 
-    // Load PWAD files.
-    modifiedgame = W_ParseCommandLine();
+    // Load additional PWAD files from command line.
+    modifiedgame |= W_ParseCommandLine();
 
     //!
     // @arg <file>
@@ -2707,11 +2696,6 @@ void D_DoomMain (void)
 
     
     // Initialize AP
-    if (mission == doom)
-        ap_settings.game = "DOOM 1993";
-    else if (mission == doom2)
-        ap_settings.game = "DOOM II";
-
     char* player_name = myargv[applayer_arg_id + 1];
     if (player_is_hex)
     {

@@ -41,6 +41,7 @@ void WI_initVariables(wbstartstruct_t* wbstartstruct);
 void WI_loadData(void);
 
 
+#if 0
 typedef struct
 {
     int x;
@@ -191,7 +192,7 @@ const level_pos_t* get_level_pos_info(int ep, int map)
     if (gamemode == commercial) return &level_pos_infos_d2[ep][map];
     return &level_pos_infos[ep][map];
 }
-
+#endif
 
 static wbstartstruct_t wiinfo;
 
@@ -287,15 +288,18 @@ void play_level(int ep, int lvl)
 
     HU_ClearAPMessages();
 
-    apdoom_check_victory(); // In case we had pending victory
+    // This breaks everything, if we're starting a new save file on an already cleared game
+    //apdoom_check_victory(); // In case we had pending victory
 }
 
 
 void select_map_dir(int dir)
 {
+    const ap_levelselect_t* screen_defs = ap_get_level_select_info(selected_ep);
+
     int from = selected_level[selected_ep];
-    float fromx = (float)get_level_pos_info(selected_ep, from)->x;
-    float fromy = (float)get_level_pos_info(selected_ep, from)->y;
+    float fromx = (float)screen_defs->map_info[from].x;
+    float fromy = (float)screen_defs->map_info[from].y;
 
     int best = from;
     int top_most = 200;
@@ -307,21 +311,20 @@ void select_map_dir(int dir)
     int map_count = ap_get_map_count(selected_ep + 1);
     for (int i = 0; i < map_count; ++i)
     {
-        const level_pos_t* level_pos = get_level_pos_info(selected_ep, i);
-        if (level_pos->y < top_most)
+        if (screen_defs->map_info[i].y < top_most)
         {
-            top_most = level_pos->y;
+            top_most = screen_defs->map_info[i].y;
             top_most_idx = i;
         }
-        if (level_pos->y > bottom_most)
+        if (screen_defs->map_info[i].y > bottom_most)
         {
-            bottom_most = level_pos->y;
+            bottom_most = screen_defs->map_info[i].y;
             bottom_most_idx = i;
         }
         if (i == from) continue;
 
-        float tox = (float)get_level_pos_info(selected_ep, i)->x;
-        float toy = (float)get_level_pos_info(selected_ep, i)->y;
+        float tox = (float)screen_defs->map_info[i].x;
+        float toy = (float)screen_defs->map_info[i].y;
         float score = 0.0f;
         float dist = 10000.0f;
 
@@ -595,16 +598,19 @@ void DrawEpisodicLevelSelectStats()
     const int key_h_spacing = 12;
     const int start_y_offset = 10;
 
+    const ap_levelselect_t* screen_defs = ap_get_level_select_info(selected_ep);
+
     int map_count = ap_get_map_count(selected_ep + 1);
     for (int i = 0; i < map_count; ++i)
     {
-        const level_pos_t* level_pos = get_level_pos_info(selected_ep, i);
+        const ap_levelselect_map_t* mapinfo = &screen_defs->map_info[i];
+
         ap_level_index_t idx = {selected_ep, i};
         ap_level_info_t* ap_level_info = ap_get_level_info(idx);
         ap_level_state_t* ap_level_state = ap_get_level_state(idx);
 
-        x = level_pos->x;
-        y = level_pos->y;
+        x = mapinfo->x;
+        y = mapinfo->y;
 
         int key_count = 0;
         for (int i = 0; i < 3; ++i)
@@ -616,12 +622,11 @@ void DrawEpisodicLevelSelectStats()
         int img_w = 0;
 
         // Level custom icon
-        if (level_pos->img)
+        if (mapinfo->image.graphic[0])
         {
-            patch_t* patch = W_CacheLumpName(level_pos->img, PU_CACHE);
+            patch_t* patch = W_CacheLumpName(mapinfo->image.graphic, PU_CACHE);
             img_w = patch->width;
-            V_DrawPatch(x + level_pos->img_x_offset, y + level_pos->img_y_offset, patch);
-            if (img_w) img_w += level_pos->img_x_offset;
+            V_DrawPatch(x + mapinfo->image.x, y + mapinfo->image.y, patch);
         }
         
         // Level complete splash
@@ -636,9 +641,48 @@ void DrawEpisodicLevelSelectStats()
         const char* key_lump_names[] = {"STKEYS0", "STKEYS1", "STKEYS2"};
         const char* key_skull_lump_names[] = {"STKEYS3", "STKEYS4", "STKEYS5"};
 
-        int key_x = 0;
-        int key_y = 0;
+        int key_x = x + mapinfo->keys.x;
+        int key_y = y + mapinfo->keys.y;
+        switch (mapinfo->keys.relative_to)
+        {
+            default:
+                break;
+            case 2:
+                key_x += img_w;
+                // fall through
+            case 1:
+                key_x += mapinfo->image.x;
+                key_y += mapinfo->image.y;
+                break;
+        }
 
+        for (int k = 0; k < 3; ++k)
+        {
+            if (!ap_level_info->keys[k])
+                continue;
+
+            const char* key_lump_name = (ap_level_info->use_skull[k]) ? key_skull_lump_names[k] : key_lump_names[k];
+
+            V_DrawPatch(key_x, key_y, W_CacheLumpName("KEYBG", PU_CACHE));
+            if (mapinfo->keys.use_checkmark)
+            {
+                const int checkmark_x = key_x + mapinfo->keys.checkmark_x;
+                const int checkmark_y = key_x + mapinfo->keys.checkmark_y;
+
+                V_DrawPatch(key_x + 2, key_y + 1, W_CacheLumpName(key_lump_name, PU_CACHE));
+                if (ap_level_state->keys[k])
+                    V_DrawPatch(checkmark_x, checkmark_y, W_CacheLumpName("CHECKMRK", PU_CACHE));
+            }
+            else
+            {
+                if (ap_level_state->keys[k])
+                    V_DrawPatch(key_x + 2, key_y + 1, W_CacheLumpName(key_lump_name, PU_CACHE));                
+            }
+
+            key_x += mapinfo->keys.spacing_x;
+            key_y += mapinfo->keys.spacing_y;
+        }
+#if 0
         if (level_pos->h_key_alignement)
         {
             key_x = x + img_w + 3 + level_pos->h_key_x_offset;
@@ -685,8 +729,10 @@ void DrawEpisodicLevelSelectStats()
                 }
             }
         }
+#endif
 
         // Progress
+#if 0
         int progress_x = x - 4;
         int progress_y = y + start_y_offset;
         if (level_pos->h_key_alignement)
@@ -697,7 +743,36 @@ void DrawEpisodicLevelSelectStats()
         print_right_aligned_yellow_digit(progress_x, progress_y, ap_level_state->check_count);
         V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
         print_left_aligned_yellow_digit(progress_x + 8, progress_y, ap_level_info->check_count - ap_level_info->sanity_check_count);
+#else
+        int progress_x = x + mapinfo->checks.x;
+        int progress_y = y + mapinfo->checks.y;
+        switch (mapinfo->checks.relative_to)
+        {
+            default:
+                break;
+            case 2:
+                progress_x += img_w;
+                // fall through
+            case 1:
+                progress_x += mapinfo->image.x;
+                progress_y += mapinfo->image.y;
+                break;
+            case 3:
+                progress_x += mapinfo->keys.x;
+                progress_y += mapinfo->keys.y;
+                break;
+            case 4:
+                progress_x = key_x + mapinfo->checks.x;
+                progress_y = key_y + mapinfo->checks.y;
+                break;
+        }
+        print_right_aligned_yellow_digit(progress_x, progress_y, ap_level_state->check_count);
+        V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
+        print_left_aligned_yellow_digit(progress_x + 8, progress_y, ap_level_info->check_count - ap_level_info->sanity_check_count);
 
+#endif
+
+#if 0
         // "You are here"
         if (i == selected_level[selected_ep] && urh_anim < 25)
         {
@@ -721,6 +796,14 @@ void DrawEpisodicLevelSelectStats()
                         y + y_offset + level_pos->urhere_y_offset, 
                         W_CacheLumpName(level_pos->urhere_lump_name, PU_CACHE));
         }
+#else
+        if (i == selected_level[selected_ep] && urh_anim < 25)
+        {
+            V_DrawPatch(x + mapinfo->cursor.x, 
+                        y + mapinfo->cursor.y, 
+                        W_CacheLumpName(mapinfo->cursor.graphic, PU_CACHE));
+        }
+#endif
     }
 
     // Level name
@@ -799,7 +882,7 @@ void DrawLevelSelect()
     int x_offset = ep_anim * 32;
 
     char lump_name[9];
-    snprintf(lump_name, 9, "%s", get_win_map(selected_ep));
+    snprintf(lump_name, 9, "%s", ap_get_level_select_info(selected_ep)->background_image);
     
     // [crispy] fill pillarboxes in widescreen mode
     if (SCREENWIDTH != NONWIDEWIDTH)
@@ -816,7 +899,7 @@ void DrawLevelSelect()
     }
     else
     {
-        snprintf(lump_name, 9, "%s", get_win_map(prev_ep));
+        snprintf(lump_name, 9, "%s", ap_get_level_select_info(prev_ep)->background_image);
         if (ep_anim > 0)
             x_offset = -(10 - ep_anim) * 32;
         else
