@@ -3,52 +3,137 @@
     "world": "doom_ii",
     "codename": "doom2",
     "classname": "DOOM2",
-    "wad": "DOOM2.WAD",
+	"iwad": "DOOM2.WAD",
+    "load_order": ["DOOM2.WAD", "APDOOM.WAD"],
     "item_ids": 360000,
     "loc_ids": 361000,
     "check_sanity": false,
-    "map_names": [
+    "map_info": [
         [
-            "Entryway (MAP01)",
-            "Underhalls (MAP02)",
-            "The Gantlet (MAP03)",
-            "The Focus (MAP04)",
-            "The Waste Tunnels (MAP05)",
-            "The Crusher (MAP06)",
-            "Dead Simple (MAP07)",
-            "Tricks and Traps (MAP08)",
-            "The Pit (MAP09)",
-            "Refueling Base (MAP10)",
-            "Circle of Death (MAP11)"
+            {"lump": "MAP01", "name": "Entryway (MAP01)"},
+            {"lump": "MAP02", "name": "Underhalls (MAP02)"},
+            {"lump": "MAP03", "name": "The Gantlet (MAP03)"},
+            {"lump": "MAP04", "name": "The Focus (MAP04)"},
+            {"lump": "MAP05", "name": "The Waste Tunnels (MAP05)"},
+            {"lump": "MAP06", "name": "The Crusher (MAP06)"},
+            {"lump": "MAP07", "name": "Dead Simple (MAP07)"},
+            {"lump": "MAP08", "name": "Tricks and Traps (MAP08)"},
+            {"lump": "MAP09", "name": "The Pit (MAP09)"},
+            {"lump": "MAP10", "name": "Refueling Base (MAP10)"},
+            {"lump": "MAP11", "name": "Circle of Death (MAP11)"}
         ],
         [
-            "The Factory (MAP12)",
-            "Downtown (MAP13)",
-            "The Inmost Dens (MAP14)",
-            "Industrial Zone (MAP15)",
-            "Suburbs (MAP16)",
-            "Tenements (MAP17)",
-            "The Courtyard (MAP18)",
-            "The Citadel (MAP19)",
-            "Gotcha! (MAP20)"
+            {"lump": "MAP12", "name": "The Factory (MAP12)"},
+            {"lump": "MAP13", "name": "Downtown (MAP13)"},
+            {"lump": "MAP14", "name": "The Inmost Dens (MAP14)"},
+            {"lump": "MAP15", "name": "Industrial Zone (MAP15)"},
+            {"lump": "MAP16", "name": "Suburbs (MAP16)"},
+            {"lump": "MAP17", "name": "Tenements (MAP17)"},
+            {"lump": "MAP18", "name": "The Courtyard (MAP18)"},
+            {"lump": "MAP19", "name": "The Citadel (MAP19)"},
+            {"lump": "MAP20", "name": "Gotcha! (MAP20)"}
         ],
         [
-            "Nirvana (MAP21)",
-            "The Catacombs (MAP22)",
-            "Barrels o Fun (MAP23)",
-            "The Chasm (MAP24)",
-            "Bloodfalls (MAP25)",
-            "The Abandoned Mines (MAP26)",
-            "Monster Condo (MAP27)",
-            "The Spirit World (MAP28)",
-            "The Living End (MAP29)",
-            "Icon of Sin (MAP30)"
+            {"lump": "MAP21", "name": "Nirvana (MAP21)"},
+            {"lump": "MAP22", "name": "The Catacombs (MAP22)"},
+            {"lump": "MAP23", "name": "Barrels o Fun (MAP23)"},
+            {"lump": "MAP24", "name": "The Chasm (MAP24)"},
+            {"lump": "MAP25", "name": "Bloodfalls (MAP25)"},
+            {"lump": "MAP26", "name": "The Abandoned Mines (MAP26)"},
+            {"lump": "MAP27", "name": "Monster Condo (MAP27)"},
+            {"lump": "MAP28", "name": "The Spirit World (MAP28)"},
+            {"lump": "MAP29", "name": "The Living End (MAP29)"},
+            {"lump": "MAP30", "name": "Icon of Sin (MAP30)"}
         ],
         [
-            "Wolfenstein2 (MAP31)",
-            "Grosse2 (MAP32)"
+            {"lump": "MAP31", "name": "Wolfenstein2 (MAP31)"},
+            {"lump": "MAP32", "name": "Grosse2 (MAP32)"}
         ]
     ],
+    "map_tweaks":{
+        "MAP02":{
+            // Exit the lower hallway without a blue key, if you drop down
+            "linedefs":{
+                "390":{"special": 1}
+            }
+        },
+        "MAP12":{
+            // We need to turn the balcony you jump down from into the building, into a lift
+            "linedefs":{
+                "271":{"special": 62, "tag": 42, "flags": 12}
+            },
+            "sectors":{
+                "132":{"tag": 42, "floor_pic": "STEP1"}
+            }
+        }
+    },
+    "level_select":{
+        "defaults":{
+            "map_names": {"display": false},
+            "maps":{
+                "x": 30,
+                "cursor": {"graphic": "M_SKULL1", "x": -32, "y": -9},
+                "image": {"x": 10, "y": -5},
+                "keys": {"relative_to": "image-right", "x": 3, "y": 2, "spacing_x": 12},
+                "checks": {"relative_to": "keys-last", "x": 8, "y": 2}
+            }
+        },
+        "episodes":[
+            {
+                "background_image": "INTERPIC",
+                "maps":[
+                    { "y":  15, "image": {"graphic": "CWILV00"} },
+                    { "y":  32, "image": {"graphic": "CWILV01"} },
+                    { "y":  49, "image": {"graphic": "CWILV02"} },
+                    { "y":  66, "image": {"graphic": "CWILV03"} },
+                    { "y":  83, "image": {"graphic": "CWILV04"} },
+                    { "y": 100, "image": {"graphic": "CWILV05"} },
+                    { "y": 117, "image": {"graphic": "CWILV06"} },
+                    { "y": 134, "image": {"graphic": "CWILV07"} },
+                    { "y": 151, "image": {"graphic": "CWILV08"} },
+                    { "y": 168, "image": {"graphic": "CWILV09"} },
+                    { "y": 185, "image": {"graphic": "CWILV10"} }
+                ]
+            },
+            {
+                "background_image": "D2INTER2",
+                "maps":[
+                    { "x": 40, "y":  15, "image": {"graphic": "CWILV11"} },
+                    { "x": 40, "y":  36, "image": {"graphic": "CWILV12"} },
+                    { "x": 40, "y":  57, "image": {"graphic": "CWILV13"} },
+                    { "x": 40, "y":  78, "image": {"graphic": "CWILV14"} },
+                    { "x": 40, "y":  99, "image": {"graphic": "CWILV15"} },
+                    { "x": 40, "y": 120, "image": {"graphic": "CWILV16"} },
+                    { "x": 40, "y": 141, "image": {"graphic": "CWILV17"} },
+                    { "x": 40, "y": 162, "image": {"graphic": "CWILV18"} },
+                    { "x": 40, "y": 183, "image": {"graphic": "CWILV19"} }
+                ]
+            },
+            {
+                "background_image": "BOSSBACK",
+                "maps":[
+                    { "y":  15, "image": {"graphic": "CWILV20"} },
+                    { "y":  33, "image": {"graphic": "CWILV21"} },
+                    { "y":  51, "image": {"graphic": "CWILV22"} },
+                    { "y":  69, "image": {"graphic": "CWILV23"} },
+                    { "y":  87, "image": {"graphic": "CWILV24"} },
+                    { "y": 105, "image": {"graphic": "CWILV25"}, "keys": {"x": -35, "y": -10} },
+                    { "y": 123, "image": {"graphic": "CWILV26"} },
+                    { "y": 141, "image": {"graphic": "CWILV27"} },
+                    { "y": 159, "image": {"graphic": "CWILV28"} },
+                    { "y": 177, "image": {"graphic": "CWILV29"} }
+                ]
+            },
+            {
+                "background_image": "D2INTER3",
+                "maps":[
+                    { "x": 100, "y":  50, "image": {"graphic": "CWILV30"} },
+                    { "x": 130, "y": 110, "image": {"graphic": "CWILV31"} }
+                ]
+            }
+        ]
+    },
+
     "location_doom_types": {
         "5": "Blue keycard",
         "40": "Blue skull key",

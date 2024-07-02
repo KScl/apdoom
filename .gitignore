@@ -69,5 +69,10 @@ ap_gen_tool_release/
 APDOOM.WAD.bak
 APHERETIC.WAD.bak
 
+ap_gen_tool/ap_gen_tool
+ap_gen_tool/*.wad
+ap_gen_tool/backup/
+ap_gen_tool/output/
+
 # Clangd cache
 .cache/

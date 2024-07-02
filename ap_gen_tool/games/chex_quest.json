@@ -3,16 +3,17 @@
     "world": "chex_quest",
     "codename": "chex_quest",
     "classname": "ChexQuest",
-    "wad": "CHEX.WAD",
+    "iwad": "CHEX.WAD",
+    "load_order": ["CHEX.WAD", "APCHEX.WAD"],
     "item_ids": 380000,
     "loc_ids": 381000,
-    "map_names": [
+    "map_info": [
         [
-            "Landing Zone (E1M1)",
-            "Storage Facility (E1M2)",
-            "Laboratory (E1M3)",
-            "Arboretum (E1M4)",
-            "Caverns of Bazoik (E1M5)"
+            {"lump": "E1M1", "name": "Landing Zone (E1M1)"},
+            {"lump": "E1M2", "name": "Storage Facility (E1M2)"},
+            {"lump": "E1M3", "name": "Laboratory (E1M3)"},
+            {"lump": "E1M4", "name": "Arboretum (E1M4)"},
+            {"lump": "E1M5", "name": "Caverns of Bazoik (E1M5)"}
         ]
     ],
     "location_doom_types": {
