@@ -735,14 +735,33 @@ void S_StartSound(void *origin_p, int sfx_id)
     }
     pitch = Clamp(pitch);
 
-    // kill old sound
-    if (!crispy->soundfull || origin || gamestate != GS_LEVEL)
+    // [AP PWAD] handle the chat sfx special, always last channel
+    if (sfx_id == sfx_tink)
     {
-    S_StopSound(origin);
+        cnum = snd_channels - 1;
+        if (channels[cnum].sfxinfo)
+        {
+            // overwrite only other chat sounds, otherwise discard and play nothing
+            if (channels[cnum].sfxinfo != &S_sfx[sfx_tink])
+                return;
+            S_StopChannel(cnum);
+        }
+
+        channels[cnum].sfxinfo = sfx;
+        channels[cnum].origin = origin;
+    }
+    else
+    {
+        // kill old sound
+        if (!crispy->soundfull || origin || gamestate != GS_LEVEL)
+        {
+        S_StopSound(origin);
+        }        
+
+        // try to find a channel
+        cnum = S_GetChannel(origin, sfx);
     }
 
-    // try to find a channel
-    cnum = S_GetChannel(origin, sfx);
 
     if (cnum < 0)
     {

@@ -139,7 +139,9 @@ static void P_TweakSector(mapsector_t *sector, ap_maptweak_t *tweak)
     {
         case TWEAK_SECTOR_SPECIAL:     sector->special = tweak->value;               break;
         case TWEAK_SECTOR_TAG:         sector->tag = tweak->value;                   break;
+        case TWEAK_SECTOR_FLOOR:       sector->floorheight = tweak->value;           break;
         case TWEAK_SECTOR_FLOOR_PIC:   memcpy(sector->floorpic, tweak->string, 8);   break;
+        case TWEAK_SECTOR_CEILING:     sector->ceilingheight = tweak->value;         break;
         case TWEAK_SECTOR_CEILING_PIC: memcpy(sector->ceilingpic, tweak->string, 8); break;
         default: break;
     }
@@ -460,44 +462,13 @@ void P_LoadSectors (int lump)
 	I_Error("P_LoadSectors: No sectors in map!");
 
     ms = (mapsector_t *)data;
-
-#if 1
-    // [AP] Alter sector data
-    {
+    { // [AP PWAD] Alter sector data
         ap_maptweak_t *tweak;
 
         ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), SECTOR_TWEAKS);
         while ((tweak = ap_get_map_tweaks()) != NULL)
             P_TweakSector(&ms[tweak->target], tweak);
     }
-#else
-    if (gamemode == commercial)
-    {
-#if 0
-        // Doom II
-        if (gamemap == 12)
-        {
-            ms[132].tag = 42;
-            sprintf(ms[132].floorpic, "STEP1");
-        }
-#else
-        // STRAIN
-        if (gamemap == 10)
-        {
-            ms[92].tag = 0;
-            ms[93].tag = 0;
-            ms[94].tag = 0;
-            ms[95].tag = 0;
-            ms[101].tag = 0;
-        }
-        else if (gamemap == 16)
-        {
-            ms[59].tag = 690;
-            ms[134].tag = 690;
-        }
-#endif
-    }
-#endif
 
     ss = sectors;
     for (i=0 ; i<numsectors ; i++, ss++, ms++)
@@ -842,6 +813,14 @@ void P_LoadThings (int lump)
     int things_type_remap[1024] = {0};
 
     mt = (mapthing_t *)data;
+    { // [AP PWAD] Alter mapthing data
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), MAPTHING_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakMapThing(&mt[tweak->target], tweak);
+    }
+
     for (i = 0; i < numthings; i++, mt++)
     {
         things_type_remap[i] = mt->type;
@@ -1204,31 +1183,6 @@ void P_LoadThings (int lump)
 	
     mt = (mapthing_t *)data;
 
-#if 1
-    // [AP] Alter mapthing data
-    {
-        ap_maptweak_t *tweak;
-
-        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), MAPTHING_TWEAKS);
-        while ((tweak = ap_get_map_tweaks()) != NULL)
-            P_TweakMapThing(&mt[tweak->target], tweak);
-    }
-#else
-    // STRAIN
-    if (gamemode == commercial)
-    {
-        if (gamemap == 2)
-        {
-            mt[433].y = -2024;
-        }
-        else if (gamemap == 12)
-        {
-            mt[342].x = 322;
-            mt[342].y = 736;
-        }
-    }
-#endif
-
     for (i=0 ; i<numthings ; i++, mt++)
     {
 	spawn = true;
@@ -1308,37 +1262,14 @@ void P_LoadThings (int lump)
 
     // [AP] Spawn level select teleport "HUB"
     spawnthing_player1_start.type = 20002;
-
-#if 1
-    // [AP PWAD] Alter hub data
-    {
+    { // [AP PWAD] Alter hub data
         ap_maptweak_t *tweak;
 
         ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), HUB_TWEAKS);
         while ((tweak = ap_get_map_tweaks()) != NULL)
             P_TweakHub(&spawnthing_player1_start, tweak);
     }
-#else
-    // STRAIN
-    if (gamemode == commercial)
-    {
-        if (gamemap == 2)
-        {
-            spawnthing_player1_start.x = -320;
-            spawnthing_player1_start.y = -2304;
-        }
-        else if (gamemap == 5)
-        {
-            spawnthing_player1_start.x = -224;
-            spawnthing_player1_start.y = -184;
-        }
-        else if (gamemap == 7)
-        {
-            spawnthing_player1_start.x = -112;
-            spawnthing_player1_start.y = -2064;
-        }
-    }
-#endif
+
     P_SpawnMapThing(&spawnthing_player1_start, i);
 
     if (!deathmatch)
@@ -1377,88 +1308,16 @@ void P_LoadLineDefs (int lump)
     data = W_CacheLumpNum (lump,PU_STATIC);
 	
     mld = (maplinedef_t *)data;
-    ld = lines;
-    warn = warn2 = 0; // [crispy] warn about invalid linedefs
-
-#if 1
-    // [AP PWAD] Alter linedef data
-    {
+    { // [AP PWAD] Alter linedef data
         ap_maptweak_t *tweak;
 
         ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), LINEDEF_TWEAKS);
         while ((tweak = ap_get_map_tweaks()) != NULL)
             P_TweakLinedef(&mld[tweak->target], tweak);
     }
-#else
-    // [AP] If the multiworld was generacted with 2 way keydoors, we need to fix those doors to be 2 ways
-#if 0
-    if (gamemode == commercial)
-    {
-        // Doom II
-        if (gamemap == 2)
-        {
-            mld[390].special = 1;
-        }
-        else if (gamemap == 12)
-        {
-            mld[271].special = 62;
-            mld[271].tag = 42;
-            mld[271].flags &= ~0x0010; // LINE_FLAGS_LOWER_UNPEGGED;
-        }
-    }
-    else
-    {
-        // Ultimate Doom
-        if (gameepisode == 2 && gamemap == 6 && ap_state.two_ways_keydoors)
-            mld[620].special = 27; // Yellow keycard
-        else if (gameepisode == 3 && gamemap == 9 && ap_state.two_ways_keydoors)
-            mld[195].special = 32; // Blue keycard
 
-        // [AP] Can be softlocked if coming back to that level after boss is dead, make sure to disable it's triggers that closes the doors
-        else if (gameepisode == 2 && gamemap == 8)
-        {
-            for (i = 140; i <= 143; ++i)
-            {
-                mld[i].special = 0;
-                mld[i].tag = 0;
-            }
-        }
-
-        // [AP] We can get stuck and not able to come back to the HUB. Make sure the entrance door can be re-openned from the other side
-        else if (gameepisode == 4 && gamemap == 8)
-            mld[96].special = 61; // Stay open
-    }
-#else
-    // STRAIN
-    if (gamemode == commercial)
-    {
-        if (gamemap == 2)
-        {
-            mld[845].special = 133;
-            mld[5].special = 0;
-        }
-        else if (gamemap == 10)
-        {
-            mld[678].special = 31;
-        }
-        else if (gamemap == 13)
-        {
-            mld[1520].special = 118;
-        }
-        else if (gamemap == 16)
-        {
-            mld[644].special = 62;
-            mld[645].special = 62;
-            mld[644].tag = 690;
-            mld[645].tag = 690;
-        }
-        else if (gamemap == 18)
-        {
-            mld[2502].special = 117;
-        }
-    }
-#endif
-#endif
+    ld = lines;
+    warn = warn2 = 0; // [crispy] warn about invalid linedefs
 
     for (i=0 ; i<numlines ; i++, mld++, ld++)
     {
@@ -1600,41 +1459,13 @@ void P_LoadSideDefs (int lump)
     data = W_CacheLumpNum (lump,PU_STATIC);
 	
     msd = (mapsidedef_t *)data;
-
-#if 1
-    // [AP PWAD] Alter sidedef data
-    {
+    { // [AP PWAD] Alter sidedef data
         ap_maptweak_t *tweak;
 
         ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), SIDEDEF_TWEAKS);
         while ((tweak = ap_get_map_tweaks()) != NULL)
             P_TweakSidedef(&msd[tweak->target], tweak);
     }
-#else
-    if (gamemode == commercial)
-    {
-#if 0
-        // Doom II
-        if (gamemap == 2)
-        {
-            sprintf(msd[584].midtexture, "%s", "SHAWN2");
-            sprintf(msd[589].midtexture, "%s", "SHAWN2");
-        }
-        else if (gamemap == 12)
-        {
-            memcpy(msd[366].bottomtexture, "SUPPORT2", 8);
-            memcpy(msd[316].bottomtexture, "SUPPORT2", 8);
-        }
-#else
-        // STRAIN
-        if (gamemap == 2)
-        {
-            sprintf(msd[1329].midtexture, "%s", "DOORBLU");
-            sprintf(msd[1330].midtexture, "%s", "DOORBLU");
-        }
-#endif
-    }
-#endif
 
     sd = sides;
     for (i=0 ; i<numsides ; i++, msd++, sd++)

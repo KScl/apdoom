@@ -238,7 +238,8 @@ void F_Ticker (void)
 	if (map_idx == 30)
 	  F_StartCast ();
 	else
-	  gameaction = ga_worlddone;
+		// [AP] back to level select
+		gameaction = ga_levelselect;
       }
     }
     

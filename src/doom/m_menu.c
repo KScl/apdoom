@@ -3275,8 +3275,8 @@ void M_Drawer (void)
 	return;
 
     
-    if (gamemode == commercial)
-        V_DrawPatch(0, 0, W_CacheLumpName("INTERPIC", PU_CACHE));
+    if (ap_game_info.pausepic)
+        V_DrawPatch(0, 0, W_CacheLumpName(ap_game_info.pausepic, PU_CACHE));
     if (currentMenu->routine)
 	currentMenu->routine();         // call Draw routine
     

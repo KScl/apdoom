@@ -1038,7 +1038,7 @@ void HU_InitAPMessages()
                         HU_FONTSTART, &ap_message_ons[i]);
 }
 
-
+#include "i_system.h"
 void HU_AddAPLine(const char* line, int len)
 {
     char baked_line[HU_MAXLINELENGTH + 1];
@@ -1047,7 +1047,13 @@ void HU_AddAPLine(const char* line, int len)
 
     // Add to buffer
     if (ap_message_buffer_count >= HU_MAX_LINE_BUFFER)
-        return; // No more room
+    {
+        for (int i = HU_FONTSTART; i < HU_FONTEND; ++i)
+        {
+            printf("hu_font['%c']: at %p, width %i", (char)i, hu_font[i], hu_font[i]->width);
+        }
+        I_Error("Out of AP line room trying to add '%s' (len %i)\n", line, len);
+    }
     memcpy(ap_message_buffer[ap_message_buffer_count], baked_line, len + 1);
     ap_message_buffer_count++;
 }
