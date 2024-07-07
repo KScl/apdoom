@@ -7,7 +7,10 @@
     "load_order": ["HERETIC.WAD", "APHERETIC.WAD"],
     "item_ids": 370000,
     "loc_ids": 371000,
-    "check_sanity": true,
+    "settings": {
+        "check_sanity": true
+    },
+
     "map_info": [
         [
             {"lump": "E1M1", "name": "The Docks (E1M1)"},
@@ -65,6 +68,35 @@
             {"lump": "E5M9", "name": "Skein of D'Sparil (E5M9)"}
         ]
     ],
+    "game_info":{
+        "ammo": [
+            {"name": "Crystals", "max": 100},
+            {"name": "Arrows", "max": 50},
+            {"name": "Claw orbs", "max": 200},
+            {"name": "Runes", "max": 200},
+            {"name": "Flame orbs", "max": 20},
+            {"name": "Spheres", "max": 150}
+        ],
+        "weapons": [
+            {"name": "Staff"},
+            {"name": "Elven Wand", "ammo_type": "Crystals", "starting_ammo": 50},
+            {"name": "Ethereal Crossbow", "ammo_type": "Arrows", "starting_ammo": 30},
+            {"name": "Dragon Claw", "ammo_type": "Claw orbs", "starting_ammo": 50},
+            {"name": "Hellstaff", "ammo_type": "Runes", "starting_ammo": 150},
+            {"name": "Phoenix Rod", "ammo_type": "Flame orbs", "starting_ammo": 10},
+            {"name": "Firemace", "ammo_type": "Spheres", "starting_ammo": 150},
+            {"name": "Gauntlets of the Necromancer"},
+            {"name": "Chicken's Beak"}
+        ],
+
+        "hint_auto_complete":{
+            "YELLOW": "Yellow key",
+            "GREEN": "Green key",
+            "BLUE": "Blue key",
+            "MAP": "Computer area map"
+        }
+    },
+
     "location_doom_types": {
         "79": "Blue key",
         "80": "Yellow key",

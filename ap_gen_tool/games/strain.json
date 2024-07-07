@@ -8,7 +8,10 @@
     "load_order": ["DOOM2.WAD", "strain.wad", "Strain_Jive.wad", "APDOOM.WAD", "APSTRAIN.WAD"],
     "item_ids": 362000,
     "loc_ids": 363000,
-    "check_sanity": false,
+    "settings":{
+        "extended_names": true
+    },
+
     "map_info": [
         [
             {"lump": "MAP01", "name": "Barracks (MAP01)"},
@@ -51,6 +54,33 @@
             {"lump": "MAP32", "name": "Super-Secret (MAP32)"}
         ]
     ],
+    "game_info":{
+        "ammo": [
+            {"name": "Bullets", "max": 200},
+            {"name": "Shells", "max": 50},
+            {"name": "Batteries", "max": 50},
+            {"name": "Rockets", "max": 50}
+        ],
+        "weapons": [
+            {"name": "Double Punch"},
+            {"name": "Pistol", "ammo_type": "Bullets"},
+            {"name": "Sawed-off shotgun", "ammo_type": "Shells", "starting_ammo": 20},
+            {"name": "Chaingun", "ammo_type": "Bullets", "starting_ammo": 100},
+            {"name": "Rocket launcher", "ammo_type": "Rockets", "starting_ammo": 20},
+            {"name": "NFG", "ammo_type": "Batteries", "starting_ammo": 20},
+            {"name": "Psychic blaster", "ammo_type": "Rockets", "starting_ammo": 30},
+            {"name": "Chainsaw"},
+            {"name": "Super shotgun", "ammo_type": "Shells", "starting_ammo": 30}
+        ],
+        "pausepic": "TITLEPIC",
+
+        "hint_auto_complete":{
+            "BLUE": ["Blue keycard", "Blue skull key"],
+            "YELLOW": ["Yellow keycard", "Yellow skull key"],
+            "RED": ["Red keycard", "Red skull key"],
+            "MAP": "Computer area map"
+        }
+    },
     "map_tweaks":{
         // Outskirts (MAP02)
         "MAP02":{
@@ -99,7 +129,12 @@
             },
             "linedefs":{
                 // Do *not* require the red key to return to start
-                "678":{"special":31}
+                "678":{"special":31},
+
+                // Do *not* require the blue key to get out of the central star
+                // We cannot make this a two-way keydoor because the linedefs on the other side are oriented wrong
+                "940":{"special":31},
+                "944":{"special":31}
             }
         },
 
@@ -135,7 +170,17 @@
 
         // Promenade (MAP17)
         "MAP17":{
-            "TODO":"doors locking on you"
+            "linedefs":{
+                // Gauntlet Hallway hackery
+                // Keep the switch open for the first door so it can be opened again
+                "780": {"special": 0},
+                "797": {"special": 115},
+
+                // These triggers to close doors behind you have no other recourse if respawns are on
+                // so they need to be disabled
+                "2417": {"special": 0},
+                "2418": {"special": 0}
+            }
         },
 
         // Relay Station (MAP18)
@@ -168,7 +213,11 @@
         "MAP22":{
             "linedefs":{
                 // Two-way key lock the boss rush room door
-                "700":{"special":26}
+                "700":{"special":26},
+
+                // Lower the bookshelf blocking the danger room if approached from behind
+                // (due to having the blue key earlier than intended)
+                "884":{"special":19, "tag": 7}
             }
         },
 
@@ -209,6 +258,14 @@
 
         // Boss (MAP30)
         "MAP30":{
+            "things":{
+                // Angle the player start better, since we're skipping the lift.
+                "0": {"angle": 135}
+            },
+            "sectors":{
+                // Skip the lift, have it pre-lowered.
+                "49": {"floor": 0}
+            },
             "linedefs":{
                 // Fix all teleporters to go to consistent locations.
                 // We do this to quarter the total check count.
@@ -243,16 +300,22 @@
                 "965":{"tag":37},
                 "966":{"tag":37}
             }
+        },
+
+        // Secret (MAP31)
+        "MAP31":{
+            // Move the hub out of the way of the door behind it.
+            "hub":{"x":148,"y":-292}
         }
     },
     "level_select":{
         "defaults":{
-            "map_names": {"display": false},
+            "map_name_position": "individual",
             "maps":{
                 "x": 30,
-                "cursor": {"graphic": "M_SKULL1", "x": -32, "y": -9},
-                "image": {"x": 10, "y": -5},
-                "keys": {"relative_to": "image-right", "x": 3, "y": 2, "spacing_x": 12},
+                "cursor": {"graphic": "M_SKULL1", "x": -30, "y": -11},
+                "map_name": {"x": 10, "y": -5},
+                "keys": {"relative_to": "map-name-right", "x": 3, "y": 2, "spacing_x": 12},
                 "checks": {"relative_to": "keys-last", "x": 8, "y": 2}
             }
         },
@@ -260,53 +323,68 @@
             {
                 "background_image": "INTERPIC",
                 "maps":[
-                    { "y":  15, "image": {"graphic": "CWILV00"} },
-                    { "y":  32, "image": {"graphic": "CWILV01"} },
-                    { "y":  49, "image": {"graphic": "CWILV02"} },
-                    { "y":  66, "image": {"graphic": "CWILV03"} },
-                    { "y":  83, "image": {"graphic": "CWILV04"} },
-                    { "y": 100, "image": {"graphic": "CWILV05"} },
-                    { "y": 117, "image": {"graphic": "CWILV06"} },
-                    { "y": 134, "image": {"graphic": "CWILV07"} },
-                    { "y": 151, "image": {"graphic": "CWILV08"} },
-                    { "y": 168, "image": {"graphic": "CWILV09"} },
-                    { "y": 185, "image": {"graphic": "CWILV10"} }
+                    { "y":  15, "map_name": {"graphic": "CWILV00"} },
+                    { "y":  32, "map_name": {"graphic": "CWILV01"} },
+                    { "y":  49, "map_name": {"graphic": "CWILV02"} },
+                    { "y":  66, "map_name": {"graphic": "CWILV03"} },
+                    { "y":  83, "map_name": {"graphic": "CWILV04"} },
+                    { "y": 100, "map_name": {"graphic": "CWILV05"} },
+                    { "y": 117, "map_name": {"graphic": "CWILV06"} },
+                    { "y": 134, "map_name": {"graphic": "CWILV07"} },
+                    { "y": 151, "map_name": {"graphic": "CWILV08"} },
+                    { "y": 168, "map_name": {"graphic": "CWILV09", "y": -4}, "keys":{"y": 1} },
+                    { "y": 185, "map_name": {"graphic": "CWILV10"} }
                 ]
             },
             {
                 "background_image": "INTERPIC",
                 "maps":[
-                    { "y":  15, "image": {"graphic": "CWILV11"} },
-                    { "y":  36, "image": {"graphic": "CWILV12"} },
-                    { "y":  57, "image": {"graphic": "CWILV13"} },
-                    { "y":  78, "image": {"graphic": "CWILV14"} },
-                    { "y":  99, "image": {"graphic": "CWILV15"} },
-                    { "y": 120, "image": {"graphic": "CWILV16"} },
-                    { "y": 141, "image": {"graphic": "CWILV17"} },
-                    { "y": 162, "image": {"graphic": "CWILV18"} },
-                    { "y": 183, "image": {"graphic": "CWILV19"} }
+                    { "y":  15, "map_name": {"graphic": "CWILV11"} },
+                    { "y":  36, "map_name": {"graphic": "CWILV12"} },
+                    { "y":  57, "map_name": {"graphic": "CWILV13"} },
+                    { "y":  78, "map_name": {"graphic": "CWILV14"} },
+                    { "y":  99, "map_name": {"graphic": "CWILV15"} },
+                    { "y": 120, "map_name": {"graphic": "CWILV16"} },
+                    { "y": 141, "map_name": {"graphic": "CWILV17"} },
+                    { "y": 162, "map_name": {"graphic": "CWILV18"} },
+                    { "y": 183, "map_name": {"graphic": "CWILV19"} }
                 ]
             },
             {
                 "background_image": "INTERPIC",
                 "maps":[
-                    { "y":  15, "image": {"graphic": "CWILV20"} },
-                    { "y":  33, "image": {"graphic": "CWILV21"} },
-                    { "y":  51, "image": {"graphic": "CWILV22"} },
-                    { "y":  69, "image": {"graphic": "CWILV23"} },
-                    { "y":  87, "image": {"graphic": "CWILV24"} },
-                    { "y": 105, "image": {"graphic": "CWILV25"} },
-                    { "y": 123, "image": {"graphic": "CWILV26"} },
-                    { "y": 141, "image": {"graphic": "CWILV27"} },
-                    { "y": 159, "image": {"graphic": "CWILV28"} },
-                    { "y": 177, "image": {"graphic": "CWILV29"} }
+                    { "y":  15, "map_name": {"graphic": "CWILV20"} },
+                    { "y":  33, "map_name": {"graphic": "CWILV21"} },
+                    { "y":  51, "map_name": {"graphic": "CWILV22"} },
+                    { "y":  69, "map_name": {"graphic": "CWILV23"} },
+                    { "y":  87, "map_name": {"graphic": "CWILV24"} },
+                    { "y": 105, "map_name": {"graphic": "CWILV25"} },
+                    { "y": 123, "map_name": {"graphic": "CWILV26"} },
+                    { "y": 141, "map_name": {"graphic": "CWILV27"} },
+                    { "y": 159, "map_name": {"graphic": "CWILV28"} },
+                    { "y": 177, "map_name": {"graphic": "CWILV29"} }
                 ]
             },
             {
+                "map_name_position": "top-center",
                 "background_image": "INTERPIC",
                 "maps":[
-                    { "y":  15, "image": {"graphic": "CWILV30"} },
-                    { "y":  50, "image": {"graphic": "CWILV31"} }
+                    {
+                        "x": 226,
+                        "y":  65,
+                        "map_name": {"graphic": "CWILV30"},
+                        "cursor": {"graphic":"WIURH1", "x":-2, "y":-5},
+                        "keys": {"relative_to": "map", "x": 31, "y": -1},
+                        "checks": {"x": -10, "y": -8}
+                    },
+                    {
+                        "x":  93,
+                        "y": 144,
+                        "map_name": {"graphic": "CWILV31"},
+                        "cursor": {"graphic":"WIURH2", "x": 2, "y":10},
+                        "keys": {"relative_to": "map", "x": -40, "y": -7},
+                        "checks": {"x": -10, "y": 12}
+                    }
                 ]
             }
         ]
@@ -384,12 +462,5 @@
         {"doom_type": 38, "name": "Red skull key", "group": "Keys", "key": 2, "use_skull": true, "region_name": "Red", "color": [1, 0, 0], "sprite": "RSKUB0"}
     ],
     "loc_remap": {},
-    "item_remap": {},
-
-    "hint_autocompletions":{
-        "BLUE": "Blue *",
-        "YELLOW": "Yellow *",
-        "RED": "Red *",
-        "MAP": "Computer area map"
-    }
+    "item_remap": {}
 }

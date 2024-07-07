@@ -7,7 +7,9 @@
     "load_order": ["HACX.WAD", "APDOOM.WAD", "APHACX.WAD"],
     "item_ids": 364000,
     "loc_ids": 365000,
-    "check_sanity": false,
+    "settings":{
+        "extended_names": true
+    },
 
     "map_info": [
         [
@@ -21,7 +23,7 @@
         [
             {"lump": "MAP07", "name": "The Great Wall (MAP07)"},
             {"lump": "MAP08", "name": "Garden of Delight (MAP08)"},
-            {"lump": "MAP09", "name": "Hidden Fort (MAP09)"},
+            {"lump": "MAP09", "name": "Hidden Fortress (MAP09)"},
             {"lump": "MAP10", "name": "Anarchist Dream (MAP10)"},
             {"lump": "MAP11", "name": "Notus Us! (MAP11)"}
         ],
@@ -40,6 +42,39 @@
             {"lump": "MAP20", "name": "Intruder Alert! (MAP20)"}
         ]
     ],
+    "game_info": {
+        "ammo": [
+            {"name": "Rounds", "max": 100},
+            {"name": "Cartridges", "max": 50},
+            {"name": "Molecules", "max": 50},
+            {"name": "Torpedoes", "max": 300}
+        ],
+        "weapons": [
+            {"name": "Kick"},
+            {"name": "Pistol", "ammo_type": "Rounds", "starting_ammo": 50},
+            {"name": "Tazer", "ammo_type": "Cartridges", "starting_ammo": 30},
+            {"name": "Uzi", "ammo_type": "Rounds"},
+            {"name": "Photon 'zooka", "ammo_type": "Torpedoes", "starting_ammo": 20},
+            {"name": "Stick", "ammo_type": "Molecules", "starting_ammo": 200},
+            {"name": "Nuker", "ammo_type": "Molecules", "starting_ammo": 200},
+            {"name": "HOIG Reznator"},
+            {"name": "Cryogun", "ammo_type": "Cartridges", "starting_ammo": 30}
+        ],
+        "starting_health": 100,
+        "starting_armor": 50,
+
+        "hint_auto_complete":{
+            "KEYCARD": "Keycard",
+            "C-KEY": "C-key",
+            "CKEY": "C-key",
+            "PASSWORD": "Password",
+            "BLUE": ["Keycard", "Blue Z-key"],
+            "YELLOW": ["C-key", "Yellow Z-key"],
+            "RED": ["Password", "Red Z-key"],
+            "MAP": "SI array",
+            "SI": "SI array"
+        }
+    },
     "map_tweaks": {
         // GenEmp Corp. (MAP01)
         "MAP01": {
@@ -49,11 +84,19 @@
             },
             "sidedefs": {
                 // Display the password-locked keypad texture, for the anti-softlock change
-                "2758": {"middle": "SW2BRCOM", "y": 32}
+                "2758": {"y": 32}
             },
             "linedefs": {
                 // Anti-softlock: Make the password room require the password both ways
                 "1840": {"special": 134}
+            }
+        },
+
+        // Tunnel Town (MAP02)
+        "MAP02": {
+            "sidedefs": {
+                // Quality of life: show the correct password-locked keypad texture
+                "2688": {"y": 32}
             }
         },
 
@@ -93,6 +136,42 @@
             }
         },
 
+        // Hidden Fortress (MAP09)
+        "MAP09": {
+            "things": {
+                // Create a teleport landing from a player start
+                "60": {"type": 14, "x": 104, "y": -424, "angle": 0}
+            },
+            "sectors": {
+                // Tag sector for teleport landings
+                "36": {"tag": 690}
+            },
+            "linedefs": {
+                // Teleport out of the fortress
+                "1230": {"special": 97, "tag": 690}
+            }
+        },
+
+        // Anarchist Dream (MAP10)
+        "MAP10": {
+            // Allow retriggering the starting lift from the top position, to return to hub
+            "linedefs": {
+                "8": {"special": 62, "tag": 1}
+            },
+            "sidedefs": {
+                "11": {"middle": "BROWNPIP"}
+            }
+        },
+
+        // Notus Us! (MAP11)
+        "MAP11": {
+            "sidedefs": {
+                // Quality of life: show the correct password-locked keypad texture
+                "1848": {"y": 64},
+                "2775": {"y": 64}
+            }
+        },
+
         // Gothik Gauntlet (MAP12)
         "MAP12": {
             "linedefs": {
@@ -115,6 +194,28 @@
             }
         },
 
+        // Twilight of EnKs (MAP15)
+        "MAP15": {
+            "linedefs": {
+                // Make the required "secret" exit normal.
+                "372": {"special": 52},
+                "373": {"special": 52},
+                "374": {"special": 52},
+                "375": {"special": 52},
+
+                // Unlock a door that normally requires a Blue Z-key to open
+                // The room that it leads to is normally reachable without any keys anyway
+                "1423": {"special": 1},
+                "1815": {"special": 1},
+                "1816": {"special": 1}
+            },
+            "sidedefs": {
+                // Remove the appearance of a blue key requirement for the above change
+                "2065": {"upper": "HW513"},
+                "2686": {"upper": "HW513"}
+            }
+        },
+
         // Protean Cybex (MAP16)
         "MAP16": {
             // Move the hub back a bit, so it's not sitting right on top of the exit switch
@@ -124,7 +225,12 @@
         // River of Blood (MAP17)
         "MAP17": {
             // Move the hub into the waterfall area so it can be reached
-            "hub": {"x": -1200, "y": 448}
+            "hub": {"x": -1200, "y": 448},
+
+            "linedefs": {
+                // Fix possible softlock from trap door
+                "629": {"special": 118}
+            }
         },
 
         // Intruder Alert! (MAP20)
@@ -147,12 +253,12 @@
     },
     "level_select":{
         "defaults":{
-            "map_names": {"display": false},
+            "map_name_position": "individual",
             "maps":{
                 "x": 28,
                 "cursor": {"graphic": "M_SKULL1", "x": -26, "y": -9},
-                "image": {"x": 8, "y": -5},
-                "keys": {"relative_to": "image-right", "x": 20, "y": 6, "spacing_x": 10},
+                "map_name": {"x": 8, "y": -5},
+                "keys": {"relative_to": "map-name-right", "x": 20, "y": 6, "spacing_x": 10},
                 "checks": {"relative_to": "keys-last", "x": 16, "y": 2}
             }
         },
@@ -160,42 +266,42 @@
             {
                 "background_image": "LEVELBG1",
                 "maps":[
-                    { "y":  89, "image": {"graphic": "CWILV00"} },
-                    { "y": 108, "image": {"graphic": "CWILV01"} },
-                    { "y": 127, "image": {"graphic": "CWILV02"} },
-                    { "y": 146, "image": {"graphic": "CWILV03"}, "checks": {"x": 8} },
-                    { "y": 165, "image": {"graphic": "CWILV04"} },
-                    { "y": 184, "image": {"graphic": "CWILV05"} }
+                    { "y":  89, "map_name": {"graphic": "CWILV00"} },
+                    { "y": 108, "map_name": {"graphic": "CWILV01"} },
+                    { "y": 127, "map_name": {"graphic": "CWILV02"} },
+                    { "y": 146, "map_name": {"graphic": "CWILV03"}, "checks": {"x": 8} },
+                    { "y": 165, "map_name": {"graphic": "CWILV04"} },
+                    { "y": 184, "map_name": {"graphic": "CWILV05"} }
                 ]
             },
             {
                 "background_image": "LEVELBG2",
                 "maps":[
-                    { "y": 108, "image": {"graphic": "CWILV06"} },
-                    { "y": 127, "image": {"graphic": "CWILV07"}, "checks": {"x": 8} },
-                    { "y": 146, "image": {"graphic": "CWILV08"} },
-                    { "y": 165, "image": {"graphic": "CWILV09"}, "checks": {"x": 8} },
-                    { "y": 184, "image": {"graphic": "CWILV10"} }
+                    { "y": 108, "map_name": {"graphic": "CWILV06"} },
+                    { "y": 127, "map_name": {"graphic": "CWILV07"}, "checks": {"x": 8} },
+                    { "y": 146, "map_name": {"graphic": "CWILV08"} },
+                    { "y": 165, "map_name": {"graphic": "CWILV09"}, "checks": {"x": 8} },
+                    { "y": 184, "map_name": {"graphic": "CWILV10"} }
                 ]
             },
             {
                 "background_image": "LEVELBG3",
                 "maps":[
-                    { "y": 127, "image": {"graphic": "CWILV11"} },
-                    { "y": 146, "image": {"graphic": "CWILV12"} },
-                    { "y": 165, "image": {"graphic": "CWILV13"} },
-                    { "y": 184, "image": {"graphic": "CWILV14"}, "keys": {"x": 17}, "checks": {"x": 13}  }
+                    { "y": 127, "map_name": {"graphic": "CWILV11"} },
+                    { "y": 146, "map_name": {"graphic": "CWILV12"} },
+                    { "y": 165, "map_name": {"graphic": "CWILV13"} },
+                    { "y": 184, "map_name": {"graphic": "CWILV14"}, "keys": {"x": 17}, "checks": {"x": 13}  }
                 ]
             },
             {
                 "background_image": "LEVELBG4",
                 "maps":[
-                    { "y":  89, "image": {"graphic": "CWILV30"} },
-                    { "y": 108, "image": {"graphic": "CWILV15"}, "checks": {"x": 8} },
-                    { "y": 127, "image": {"graphic": "CWILV16"}, "checks": {"x": 8} },
-                    { "y": 146, "image": {"graphic": "CWILV17"} },
-                    { "y": 165, "image": {"graphic": "CWILV18"}, "checks": {"x": 8} },
-                    { "y": 184, "image": {"graphic": "CWILV19"} }
+                    { "y":  89, "map_name": {"graphic": "CWILV30"} },
+                    { "y": 108, "map_name": {"graphic": "CWILV15"}, "checks": {"x": 8} },
+                    { "y": 127, "map_name": {"graphic": "CWILV16"}, "checks": {"x": 8} },
+                    { "y": 146, "map_name": {"graphic": "CWILV17"} },
+                    { "y": 165, "map_name": {"graphic": "CWILV18"}, "checks": {"x": 8} },
+                    { "y": 184, "map_name": {"graphic": "CWILV19"} }
                 ]
             }
         ]
@@ -213,8 +319,8 @@
         "2019": "Super kevlar vest",
         "2023": "007Microtel",
         "2022": "Force field",
-        "2024": "EnK-blind",
-        "2013": "Cenotrophexine",
+        "2024": "EnK blinder",
+        "2013": "Centrophenoxine",
         "2006": "Nuker",
         "2002": "Uzi",
         "2005": "HOIG Reznator",
@@ -243,8 +349,8 @@
         {"doom_type": 2019, "name": "Super kevlar vest", "group": "Powerups", "sprite": "ARM2A0"},
         {"doom_type": 2023, "name": "007Microtel", "group": "Powerups", "sprite": "PSTRA0"},
         {"doom_type": 2022, "name": "Force field", "group": "Powerups", "sprite": "PINVA0"},
-        {"doom_type": 2024, "name": "EnK-blind", "group": "Powerups", "sprite": "PINSA0"},
-        {"doom_type": 2013, "name": "Cenotrophexine", "group": "Powerups", "sprite": "SOULD0"},
+        {"doom_type": 2024, "name": "EnK blinder", "group": "Powerups", "sprite": "PINSA0"},
+        {"doom_type": 2013, "name": "Centrophenoxine", "group": "Powerups", "sprite": "SOULD0"},
         {"doom_type": 83, "name": "Body armor", "group": "Powerups", "sprite": "MEGAC0"},
         {"doom_type": 2012, "name": "Hypo", "group": "", "sprite": "MEDIA0"},
         {"doom_type": 2048, "name": "Case of rounds", "group": "Ammos", "sprite": "AMMOA0"},
@@ -273,15 +379,5 @@
         {"doom_type": 38, "name": "Red Z-key", "group": "Keys", "key": 2, "use_skull": true, "region_name": "Red", "color": [1, 0, 0], "sprite": "RSKUB0"}
     ],
     "loc_remap": {},
-    "item_remap": {},
-
-    "hint_autocompletions":{
-        "KEYCARD": "Keycard",
-        "C-KEY": "C-key",
-        "PASSWORD": "Password",
-		"BLUE": "Blue Z-key",
-		"YELLOW": "Yellow Z-key",
-		"RED": "Red Z-key",
-        "MAP": "SI array"
-    }
+    "item_remap": {}
 }

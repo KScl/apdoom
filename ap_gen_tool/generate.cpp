@@ -119,6 +119,7 @@ std::map<std::string, std::set<std::string>> item_name_groups;
 std::map<uintptr_t, std::map<int, int64_t>> level_to_keycards;
 std::map<std::string, ap_item_t*> item_map;
 
+static bool use_extended_names = false; // gross hack, but whatever
 
 const char* get_doom_type_name(int doom_type);
 
@@ -150,7 +151,6 @@ bool loc_name_taken(const std::string& name)
     return false;
 }
 
-
 void add_loc(const std::string& name, const map_thing_t& thing, level_t* level, int index, int x, int y)
 {
     // Make sure it's not unreachable
@@ -161,13 +161,13 @@ void add_loc(const std::string& name, const map_thing_t& thing, level_t* level, 
     std::string extended_name = level->map_state->locations[index].name;
 
     std::string loc_name = name;
-    if (extended_name.length() > 0)
+    if (use_extended_names && extended_name.length() > 0)
         loc_name = name + " (" + extended_name + ")";
 
     while (loc_name_taken(loc_name))
     {
         ++count;
-        if (extended_name.length() > 0)
+        if (use_extended_names && extended_name.length() > 0)
             loc_name = name + " " + std::to_string(count + 1) + " (" + extended_name + ")";
         else
             loc_name = name + " " + std::to_string(count + 1);
@@ -319,6 +319,8 @@ int generate(game_t* game)
 
     ap_locations.reserve(1000);
     ap_items.reserve(1000);
+
+    use_extended_names = game->extended_names;
 
     for (const auto& def : game->progressions)
         add_item(def.name, def.doom_type, 1, PROGRESSION, def.group);
@@ -1053,10 +1055,12 @@ class LocationDict(TypedDict, total=False): \n\
         }
 
         // Extra structures in data JSON file intended for use in APDoom
-        if (!game->map_tweaks.isNull())
-            defs_json["map_tweaks"] = game->map_tweaks;
-        if (!game->level_select.isNull())
-            defs_json["level_select"] = game->level_select;
+        if (!game->json_game_info.isNull())
+            defs_json["game_info"] = game->json_game_info;
+        if (!game->json_map_tweaks.isNull())
+            defs_json["map_tweaks"] = game->json_map_tweaks;
+        if (!game->json_level_select.isNull())
+            defs_json["level_select"] = game->json_level_select;
 
         Json::StreamWriterBuilder swb;
         swb["commentStyle"] = "None";

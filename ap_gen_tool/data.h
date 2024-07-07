@@ -237,12 +237,16 @@ struct game_t
     int ep_count = -1;
     std::vector<std::vector<meta_t>> episodes;
     std::vector<ap_item_def_t> item_requirements;
-    bool check_sanity = false;
     std::map<int, int> total_doom_types; // Count of every doom types in the game
 
+    // Settings
+    bool check_sanity = false;
+    bool extended_names = false;
+
     // JSON structures which need to be preserved unchanged and put in output
-    Json::Value map_tweaks;
-    Json::Value level_select;
+    Json::Value json_game_info;
+    Json::Value json_map_tweaks;
+    Json::Value json_level_select;
 };
 
 

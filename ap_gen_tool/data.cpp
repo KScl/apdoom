@@ -40,11 +40,17 @@ void init_data()
         game.classname = game_json["classname"].asString();
         game.item_ids = game_json["item_ids"].asInt64();
         game.loc_ids = game_json["loc_ids"].asInt64();
-        game.check_sanity = game_json["check_sanity"].asBool();
+
+        if (!game_json["settings"].isNull())
+        {
+            game.check_sanity = game_json["settings"].get("check_sanity", false).asBool();
+            game.extended_names = game_json["settings"].get("extended_names", false).asBool();
+        }
 
         // Sections reserved unchanged
-        game.map_tweaks = game_json["map_tweaks"];
-        game.level_select = game_json["level_select"];
+        game.json_game_info = game_json["game_info"];
+        game.json_map_tweaks = game_json["map_tweaks"];
+        game.json_level_select = game_json["level_select"];
 
         const auto& episodes_json = game_json["map_info"];
         if (!episodes_json.empty())
