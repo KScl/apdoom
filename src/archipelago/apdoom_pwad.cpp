@@ -174,22 +174,6 @@ int json_parse_hint_autocomplete(Json::Value json, hint_autocomplete_storage_t &
 // (json: "level_select")
 // ============================================================================
 
-static int json_parse_map_names(Json::Value json)
-{
-	if (json.isNull()) return 0;
-	if (json.isInt())  return json.asInt();
-
-	std::string pretty_name = json.asString();
-	if (pretty_name == "individual")    return -1;
-	if (pretty_name == "bottom-left")   return 1;
-	if (pretty_name == "bottom-center") return 2;
-	if (pretty_name == "bottom-right")  return 3;
-	if (pretty_name == "top-left")      return 7;
-	if (pretty_name == "top-center")    return 8;
-	if (pretty_name == "top-right")     return 9;
-	return 0;
-}
-
 // Parses one mapinfo structure from a JSON blob, while taking care to not overwrite
 // any default options that may have already been set.
 static void json_parse_single_mapinfo(ap_levelselect_map_t *info, const Json::Value json)
@@ -266,7 +250,7 @@ int json_parse_level_select(Json::Value json, level_select_storage_t &output)
 
 	// Defaults for level select mapinfo, if not specified anywhere else.
 	char default_map_image[9] = "INTERPIC";
-	int default_map_names = 8; // Top-center
+	int default_map_names = -1; // Top
 	ap_levelselect_map_t default_mapinfo;
 	memset(&default_mapinfo, 0, sizeof(ap_levelselect_map_t));
 
@@ -276,8 +260,13 @@ int json_parse_level_select(Json::Value json, level_select_storage_t &output)
 		json_parse_single_mapinfo(&default_mapinfo, json["defaults"]["maps"]);
 		store_lump_name(default_map_image, json["defaults"]["background_image"]);
 
-		int new_map_names = json_parse_map_names(json["defaults"]["map_name_position"]);
-		default_map_names = (new_map_names) ? new_map_names : default_map_names;
+		if (!json["defaults"]["map_name_position"].isNull())
+		{
+			std::string pos_str = json["defaults"]["map_name_position"].asString();
+			if (pos_str == "top")             default_map_names = -1;
+			else if (pos_str == "bottom")     default_map_names = 1;
+			else if (pos_str == "individual") default_map_names = 0;
+		}
 	}
 
 	const int ep_count = (int)json["episodes"].size();
@@ -292,8 +281,15 @@ int json_parse_level_select(Json::Value json, level_select_storage_t &output)
 		else
 			memcpy(output[idx].background_image, default_map_image, 9);
 
-		int local_map_names = json_parse_map_names(episode_defs["map_name_position"]);
-		output[idx].map_names = (local_map_names) ? local_map_names : default_map_names;
+		if (!episode_defs["map_name_position"].isNull())
+		{
+			std::string pos_str = episode_defs["map_name_position"].asString();
+			if (pos_str == "top")             output[idx].map_names = -1;
+			else if (pos_str == "bottom")     output[idx].map_names = 1;
+			else if (pos_str == "individual") output[idx].map_names = 0;
+		}
+		else
+			output[idx].map_names = default_map_names;
 
 		const int map_count = (int)episode_defs["maps"].size();
 		for (int map_idx = 0; map_idx < map_count; ++map_idx)

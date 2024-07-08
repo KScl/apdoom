@@ -111,7 +111,7 @@
     },
     "level_select":{
         "defaults":{
-            "map_name_position": "top-center",
+            "map_name_position": "top",
             "maps":{
                 "keys": {"use_checkmark": true, "spacing_y": 8, "align_y": -4, "checkmark_x": 12, "checkmark_y": -1},
                 "checks": {"x": -4, "y": 10}

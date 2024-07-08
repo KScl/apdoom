@@ -243,8 +243,8 @@ typedef struct { // All info for a specific map on the level select screen
 
     struct { // Display of check count
         int relative_to; // 0 == map, 1 == image, 2 == image-right, 3 == keys, 4 == keys-last
-        int x;            // Added to base X coordinate of relative choice above
-        int y;            // Added to base Y coordinate of relative choice above
+        int x;           // Added to base X coordinate of relative choice above
+        int y;           // Added to base Y coordinate of relative choice above
     } checks;
 } ap_levelselect_map_t;
 
@@ -252,7 +252,7 @@ typedef struct { // All info for a specific map on the level select screen
 typedef struct
 {
     char background_image[9]; // Lump name to use as background
-    int map_names; // -1 == individual (display all), otherwise see your numpad for positioning
+    int map_names; // negative for upper, positive for lower, zero for individual display
 
     ap_levelselect_map_t map_info[12];
 } ap_levelselect_t;

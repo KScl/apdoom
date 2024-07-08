@@ -40,6 +40,8 @@ void WI_drawAnimatedBack(void);
 void WI_initVariables(wbstartstruct_t* wbstartstruct);
 void WI_loadData(void);
 
+void G_DoSaveGame(void);
+
 static wbstartstruct_t wiinfo;
 
 extern int bcnt;
@@ -50,12 +52,13 @@ int prev_ep = 0;
 int ep_anim = 0;
 int urh_anim = 0;
 
-static const char* key_lump_names[] = {"STKEYS0", "STKEYS1", "STKEYS2"};
-static const char* key_skull_lump_names[] = {"STKEYS3", "STKEYS4", "STKEYS5"};
+static const char* KEY_LUMP_NAMES[] = {"STKEYS0", "STKEYS1", "STKEYS2"};
+static const char* KEY_SKULL_LUMP_NAMES[] = {"STKEYS3", "STKEYS4", "STKEYS5"};
 static const char* YELLOW_DIGIT_LUMP_NAMES[] = {
     "STYSNUM0", "STYSNUM1", "STYSNUM2", "STYSNUM3", "STYSNUM4", 
     "STYSNUM5", "STYSNUM6", "STYSNUM7", "STYSNUM8", "STYSNUM9"
 };
+
 
 void print_right_aligned_yellow_digit(int x, int y, int digit)
 {
@@ -103,6 +106,15 @@ void restart_wi_anims()
     WI_initAnimatedBack();
 }
 
+static int get_episode_count()
+{
+    int ep_count = 0;
+    for (int i = 0; i < ap_episode_count; ++i)
+        if (ap_state.episodes[i])
+            ep_count++;
+    return ep_count;
+}
+
 void HU_ClearAPMessages();
 
 void play_level(int ep, int lvl)
@@ -132,11 +144,7 @@ void play_level(int ep, int lvl)
         // If none, load it fresh
         G_DeferedInitNew(gameskill, ep, lvl);
     }
-
     HU_ClearAPMessages();
-
-    // This breaks everything, if we're starting a new save file on an already cleared game
-    //apdoom_check_victory(); // In case we had pending victory
 }
 
 
@@ -243,16 +251,6 @@ static void level_select_nav_up()
 static void level_select_nav_down()
 {
     select_map_dir(3);
-}
-
-
-static int get_episode_count()
-{
-    int ep_count = 0;
-    for (int i = 0; i < ap_episode_count; ++i)
-        if (ap_state.episodes[i])
-            ep_count++;
-    return ep_count;
 }
 
 
@@ -435,10 +433,11 @@ void DrawEpisodicLevelSelectStats()
         ap_level_index_t idx = {selected_ep, i};
         ap_level_info_t* ap_level_info = ap_get_level_info(idx);
         ap_level_state_t* ap_level_state = ap_get_level_state(idx);
-        const ap_levelselect_map_t* mapinfo = &screen_defs->map_info[i];
 
+        const ap_levelselect_map_t* mapinfo = &screen_defs->map_info[i];
         const int x = mapinfo->x;
         const int y = mapinfo->y;
+
         int key_x, key_y;
         int map_name_width = 0;
         int key_count = 0;
@@ -448,7 +447,7 @@ void DrawEpisodicLevelSelectStats()
                 key_count++;
 
         // Level name display ("Individual" mode)
-        if (screen_defs->map_names == -1 && mapinfo->map_name.graphic[0])
+        if (screen_defs->map_names == 0 && mapinfo->map_name.graphic[0])
         {
             patch_t* patch = W_CacheLumpName(mapinfo->map_name.graphic, PU_CACHE);
             V_DrawPatch(x + mapinfo->map_name.x, y + mapinfo->map_name.y, patch);
@@ -482,7 +481,7 @@ void DrawEpisodicLevelSelectStats()
 
             for (int k = 0; k < 3; ++k)
             {
-                const char* key_lump_name = (ap_level_info->use_skull[k]) ? key_skull_lump_names[k] : key_lump_names[k];
+                const char* key_lump_name = (ap_level_info->use_skull[k]) ? KEY_SKULL_LUMP_NAMES[k] : KEY_LUMP_NAMES[k];
                 if (!ap_level_info->keys[k])
                     continue;
 
@@ -509,6 +508,10 @@ void DrawEpisodicLevelSelectStats()
 
         // Progress
         {
+            const int total_check_count = ap_state.check_sanity
+                ? ap_level_info->check_count
+                : (ap_level_info->check_count - ap_level_info->sanity_check_count);
+
             int progress_x = x + mapinfo->checks.x;
             int progress_y = y + mapinfo->checks.y;
             switch (mapinfo->checks.relative_to)
@@ -533,7 +536,7 @@ void DrawEpisodicLevelSelectStats()
             }
             print_right_aligned_yellow_digit(progress_x, progress_y, ap_level_state->check_count);
             V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
-            print_left_aligned_yellow_digit(progress_x + 8, progress_y, ap_level_info->check_count - ap_level_info->sanity_check_count);            
+            print_left_aligned_yellow_digit(progress_x + 8, progress_y, total_check_count);
         }
 
         // You are here
@@ -560,28 +563,17 @@ void DrawEpisodicLevelSelectStats()
     }
 
     // Level name (non-"Individual" modes)
-    if (screen_defs->map_names > 0)
+    if (screen_defs->map_names != 0)
     {
         const int sel_idx = selected_level[selected_ep];
         const ap_levelselect_map_t* mapinfo = &screen_defs->map_info[sel_idx];
-        int x = 0;
-        int y = 0;
 
         if (mapinfo->map_name.graphic[0])
         {
-            patch_t* patch = W_CacheLumpName(mapinfo->map_name.graphic, PU_CACHE);
-            switch (screen_defs->map_names) // For X offset
-            {
-                case 3: case 6: case 9: x = (ORIGWIDTH - patch->width) - 2; break;
-                case 2: case 5: case 8: x = (ORIGWIDTH - patch->width) / 2; break;
-                case 1: case 4: case 7: x = 2; break;
-            }
-            switch (screen_defs->map_names) // For Y offset
-            {
-                case 7: case 8: case 9: y = 2; break;
-                case 4: case 5: case 6: y = (ORIGHEIGHT - patch->height) / 2; break;
-                case 1: case 2: case 3: y = (ORIGHEIGHT - patch->height) - 2; break;
-            }
+            patch_t *patch = W_CacheLumpName(mapinfo->map_name.graphic, PU_CACHE);
+            const int x = (ORIGWIDTH - patch->width) / 2;
+            const int y = (screen_defs->map_names < 0) ? 2 : (ORIGHEIGHT - patch->height) - 2;
+
             V_DrawPatch(x, y, patch);
         }
     }

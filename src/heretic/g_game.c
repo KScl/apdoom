@@ -1767,6 +1767,7 @@ void set_ap_player_states()
 
     // [AP] If player is this player, then override with ap_state.
     //      We don't support multiplayer anyway.
+    p->health = ap_state.player_state.health;
     p->armorpoints = ap_state.player_state.armor_points;
     p->armortype = ap_state.player_state.armor_type;
     if (!was_in_level)
