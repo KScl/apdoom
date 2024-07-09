@@ -84,11 +84,14 @@
             },
             "sidedefs": {
                 // Display the password-locked keypad texture, for the anti-softlock change
-                "2758": {"y": 32}
+                "2758": {"middle": "SW1BRCOM", "y": 32}
             },
             "linedefs": {
                 // Anti-softlock: Make the password room require the password both ways
-                "1840": {"special": 134}
+                "562": {"special": 110, "tag": 75},
+                "1840": {"special": 134},
+                "1846": {"special": 114}
+
             }
         },
 
