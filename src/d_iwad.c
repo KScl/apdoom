@@ -496,6 +496,7 @@ static boolean DirIsFile(const char *path, const char *filename)
         && !strcasecmp(M_BaseName(path), filename);
 }
 
+#if 0 // Unreferenced
 // Check if the specified directory contains the specified IWAD
 // file, returning the full path to the IWAD if found, or NULL
 // if not found.
@@ -564,6 +565,7 @@ static char *SearchDirectoryForIWAD(const char *dir, int mask, GameMission_t *mi
 
     return NULL;
 }
+#endif
 
 // When given an IWAD with the '-iwad' parameter,
 // attempt to identify it by its name.
