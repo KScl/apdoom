@@ -37,7 +37,7 @@ extern "C"
 
 
 #define AP_CHECK_MAX 128 // Arbitrary number (raised from 64)
-#define AP_MAX_THING 1024 // Twice more than current max for every level
+#define AP_MAX_THING 10240 // List is dynamically allocated; this is more to guard against malformed defs
 
 typedef struct
 {
@@ -55,7 +55,7 @@ typedef struct
     int use_skull[3];
     int check_count;
     int thing_count;
-    ap_thing_info_t thing_infos[AP_MAX_THING];
+    ap_thing_info_t* thing_infos; // Dynamically allocated
     int sanity_check_count;
 
     int game_episode;
@@ -290,6 +290,9 @@ typedef enum
     TWEAK_SIDEDEF_UPPER,
     TWEAK_SIDEDEF_X,
     TWEAK_SIDEDEF_Y,
+
+    META_TWEAKS = 0xA0,
+    TWEAK_META_BEHAVES_AS,
 
     TWEAK_TYPE_MASK = 0xF0,
 } allowed_tweaks_t;

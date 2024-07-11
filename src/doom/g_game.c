@@ -112,6 +112,10 @@ boolean		respawnmonsters;
 int             gameepisode; 
 int             gamemap; 
 
+// [AP PWAD] allow levels to behave as other levels
+int             metaepisode;
+int             metamap;
+
 // If non-zero, exit the level after this number of minutes.
 
 int             timelimit;

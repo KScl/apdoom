@@ -211,6 +211,10 @@ void f_episode2(int);
 void f_episode3(int);
 void f_episode4(int);
 void f_episode5(int);
+void f_episode6(int);
+void f_episode7(int);
+void f_episode8(int);
+void f_episode9(int);
 void f_two_ways_keydoors(int);
 void f_ammo1start(int);
 void f_ammo2start(int);
@@ -303,7 +307,7 @@ int ap_preload_defs_for_game(const char *game_name)
 		|| !json_parse_hint_autocomplete(defs_json["game_info"]["hint_auto_complete"], hint_autocomplete_table)
 	)
 	{
-		printf("APDOOM: Errors occurred while loading \"%s\".", filename.c_str());
+		printf("APDOOM: Errors occurred while loading \"%s\".\n", filename.c_str());
 		return 0;
 	}
 	return 1;
@@ -667,6 +671,10 @@ int apdoom_init(ap_settings_t* settings)
 	AP_RegisterSlotDataIntCallback("episode3", f_episode3);
 	AP_RegisterSlotDataIntCallback("episode4", f_episode4);
 	AP_RegisterSlotDataIntCallback("episode5", f_episode5);
+	AP_RegisterSlotDataIntCallback("episode6", f_episode6);
+	AP_RegisterSlotDataIntCallback("episode7", f_episode7);
+	AP_RegisterSlotDataIntCallback("episode8", f_episode8);
+	AP_RegisterSlotDataIntCallback("episode9", f_episode9);
 	AP_RegisterSlotDataIntCallback("ammo1start", f_ammo1start);
 	AP_RegisterSlotDataIntCallback("ammo2start", f_ammo2start);
 	AP_RegisterSlotDataIntCallback("ammo3start", f_ammo3start);
@@ -1549,6 +1557,34 @@ void f_episode5(int ep)
 {
 	if (ap_episode_count > 4)
 		ap_state.episodes[4] = ep;
+}
+
+
+void f_episode6(int ep)
+{
+	if (ap_episode_count > 5)
+		ap_state.episodes[5] = ep;
+}
+
+
+void f_episode7(int ep)
+{
+	if (ap_episode_count > 6)
+		ap_state.episodes[6] = ep;
+}
+
+
+void f_episode8(int ep)
+{
+	if (ap_episode_count > 7)
+		ap_state.episodes[7] = ep;
+}
+
+
+void f_episode9(int ep)
+{
+	if (ap_episode_count > 8)
+		ap_state.episodes[8] = ep;
 }
 
 

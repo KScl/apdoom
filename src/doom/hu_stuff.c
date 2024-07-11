@@ -128,6 +128,7 @@ static int ap_message_anim = 0;
 
 static boolean		headsupactive = false;
 
+#if 0 // [AP PWAD] Unreferenced
 //
 // Builtin map names.
 // The actual names can be found in DStrings.h.
@@ -409,6 +410,7 @@ const char *mapnames_commercial[] =
     MHUSTR_20,
     MHUSTR_21
 };
+#endif
 
 void HU_InitAPMessages();
 
@@ -528,6 +530,7 @@ void HU_Stop(void)
     headsupactive = false;
 }
 
+#if 0 // [AP PWAD] Unreferenced
 // [crispy] display names of single special levels in Automap
 // These are single, non-consecutive, (semi-)official levels
 // without their own music or par times and thus do not need
@@ -594,6 +597,7 @@ static void HU_SetSpecialLevelName (const char *wad, const char **name)
 	}
     }
 }
+#endif
 
 static int hu_widescreendelta;
 
@@ -603,7 +607,8 @@ void HU_Start(void)
     int		i;
     const char *s;
     // [crispy] string buffers for map title and WAD file name
-    char	buf[8], *ptr;
+    //char	buf[8], *ptr;
+    ap_level_info_t* level_info; // [AP PWAD]
 
     if (headsupactive)
 	HU_Stop();
@@ -692,7 +697,39 @@ void HU_Start(void)
 		       hu_font,
 		       HU_FONTSTART);
 
-    
+#if 1 // [AP PWAD] Show level name from AP in automap instead of normal lookup
+    level_info = ap_get_level_info(ap_make_level_index(gameepisode, gamemap));
+    s = level_info->name + strlen(level_info->name);
+
+    // Work backwards until we reach the last open parenthesis (the lump name)
+    while (s > level_info->name && *s != '(') --s;
+
+    // If we didn't find one, oh well, dump the entire map name into title text
+    if (s == level_info->name)
+    {
+        while (*s)
+            HUlib_addCharToTextLine(&w_title, *(s++));
+    }
+    else
+    {
+        const char *paren_ptr = s++;
+
+        // Turn "Name (LUMP01)" into "LUMP01: Name"
+        while (*s && *s != ')')
+            HUlib_addCharToTextLine(&w_title, *(s++));
+        HUlib_addCharToTextLine(&w_title, ':');
+
+        // [crispy] print the map title in white from the first colon onward
+        s = crstr[CR_GRAY];
+        while (*s)
+            HUlib_addCharToTextLine(&w_title, *(s++));
+        HUlib_addCharToTextLine(&w_title, ' ');
+
+        s = level_info->name;
+        while (*s && s < paren_ptr)
+            HUlib_addCharToTextLine(&w_title, *(s++));
+    }
+#else
     switch ( logical_gamemission )
     {
       case doom:
@@ -768,6 +805,7 @@ void HU_Start(void)
 	HUlib_addCharToTextLine(&w_title, *(s++));
 
     free(ptr);
+#endif
 
     // create the chat widget
     HUlib_initIText(&w_chat,

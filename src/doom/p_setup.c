@@ -198,6 +198,37 @@ static void P_TweakSidedef(mapsidedef_t *sidedef, ap_maptweak_t *tweak)
     printf("P_TweakSidedef: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
 }
 
+static void P_TweakMeta(ap_maptweak_t *tweak)
+{
+    switch (tweak->type)
+    {
+        case TWEAK_META_BEHAVES_AS:
+            // Let any arbitrary map have normally hardcoded hacks applied to it
+            if (strncmp(tweak->string, "MAP", 3) == 0)
+            {
+                metaepisode = 1;
+                metamap = atoi(&tweak->string[3]);
+            }
+            else if (tweak->string[0] == 'E'
+                && tweak->string[1] >= '1' && tweak->string[1] <= '9'
+                && tweak->string[2] == 'M')
+            {
+                metaepisode = (tweak->string[1] - '0');
+                metamap = atoi(&tweak->string[3]);
+            }
+            else if (strncmp(tweak->string, "NORMAL", 6) == 0)
+            { // Ignore normally present hacks
+                metaepisode = 1;
+                metamap = 1;
+            }
+            break;
+
+        default:
+            break;
+    }
+    printf("P_TweakMeta: [%i] %02x: %i / %s\n", tweak->target, tweak->type, tweak->value, tweak->string);
+}
+
 
 
 //
@@ -829,7 +860,9 @@ void P_LoadThings (int lump)
 #define E1M8_CUTOFF_OFFSET 6176
 
     int do_random_monsters = ap_state.random_monsters;
-    if (gamemode == commercial && gamemap == 7) do_random_monsters = 0;
+
+    // [AP PWAD] allow random monsters on DoomII Map7s that don't use tags 666 and 667
+    if (gamemode == commercial && metamap /* gamemap */ == 7) do_random_monsters = 0;
 
     if (do_random_monsters > 0)
     {
@@ -1870,6 +1903,17 @@ P_SetupLevel
     int		lumpnum;
     boolean	crispy_validblockmap;
     mapformat_t	crispy_mapformat;
+
+    // [AP PWAD] map metadata
+    metaepisode = gameepisode;
+    metamap = gamemap;
+    {
+        ap_maptweak_t *tweak;
+
+        ap_init_map_tweaks(ap_make_level_index(gameepisode, gamemap), META_TWEAKS);
+        while ((tweak = ap_get_map_tweaks()) != NULL)
+            P_TweakMeta(tweak);
+    }
 	
     totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
     // [crispy] count spawned monsters

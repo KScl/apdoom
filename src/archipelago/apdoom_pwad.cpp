@@ -380,6 +380,12 @@ static void parse_sidedefs_tweak_block(Json::Value json, std::vector<ap_maptweak
 	}
 }
 
+static void parse_metadata_tweak_block(Json::Value json, std::vector<ap_maptweak_t> &tweak_list)
+{
+	// Metadata is level-wide stuff, so the target is ignored
+	insert_new_tweak(tweak_list, TWEAK_META_BEHAVES_AS, 0, json["behaves_as"]);
+}
+
 int json_parse_map_tweaks(Json::Value json, map_tweaks_storage_t &output)
 {
 	if (json.isNull())
@@ -409,6 +415,8 @@ int json_parse_map_tweaks(Json::Value json, map_tweaks_storage_t &output)
 				parse_linedefs_tweak_block(json[map_lump_name]["linedefs"], output[idx.ep][idx.map]);
 			else if (tweak_type == "sidedefs")
 				parse_sidedefs_tweak_block(json[map_lump_name]["sidedefs"], output[idx.ep][idx.map]);
+			else if (tweak_type == "metadata")
+				parse_metadata_tweak_block(json[map_lump_name]["metadata"], output[idx.ep][idx.map]);
 			else
 				printf("APDOOM: Unknown tweak section '%s', ignoring\n", tweak_type.c_str());
 		}
@@ -583,6 +591,7 @@ int json_parse_level_info(Json::Value json, level_info_storage_t &output)
 				return 0;
 			}
 
+			new_level.thing_infos = new ap_thing_info_t[new_level.thing_count];
 			Json::Value map_things = map_info["thing_list"];
 			for (int idx = 0; idx < new_level.thing_count; ++idx)
 			{

@@ -1211,9 +1211,13 @@ class LocationDict(TypedDict, total=False): \n\
             }
         }
 
-        fprintf(fout, "\ndef set_rules(%s_world: \"%sWorld\", included_episodes, pro):\n", game->world.c_str(), game->classname.c_str());
-        fprintf(fout, "    player = %s_world.player\n", game->world.c_str());
-        fprintf(fout, "    multiworld = %s_world.multiworld\n\n", game->world.c_str());
+        // Clean up world name when it's being used as a variable name
+        std::string safe_world_name = game->world;
+        for (char &c : safe_world_name) { if (c == '-') c = '_'; }
+
+        fprintf(fout, "\ndef set_rules(%s_world: \"%sWorld\", included_episodes, pro):\n", safe_world_name.c_str(), game->classname.c_str());
+        fprintf(fout, "    player = %s_world.player\n", safe_world_name.c_str());
+        fprintf(fout, "    multiworld = %s_world.multiworld\n\n", safe_world_name.c_str());
         for (int ep = 0; ep < game->ep_count; ++ep)
         {
             fprintf(fout, "    if included_episodes[%i]:\n", ep);
