@@ -1256,7 +1256,11 @@ void set_ap_player_states()
     p->cards[3] = level_state->keys[0] && level_info->use_skull[0];
     p->cards[4] = level_state->keys[1] && level_info->use_skull[1];
     p->cards[5] = level_state->keys[2] && level_info->use_skull[2];
-    
+
+    // respawn would-be zombies, if ap health somehow becomes zero
+    if (p->playerstate == PST_LIVE && p->health == 0)
+        ap_set_respawning_player_attributes(p);
+
     // mo
     if (p->mo)
     {
@@ -2503,8 +2507,6 @@ G_SaveGame
     M_StringCopy(savedescription, description, sizeof(savedescription));
     sendsave = true;
 }
-
-void cache_ap_player_state(void);
 
 void G_DoSaveGame (void) 
 { 

@@ -1824,6 +1824,10 @@ void set_ap_player_states()
         ++p->inventorySlotNum;
     }
 
+    // respawn would-be zombies, if ap health somehow becomes zero
+    if (p->playerstate == PST_LIVE && p->health == 0)
+        p->health = 100;
+
     // mo
     if (p->mo)
     {
