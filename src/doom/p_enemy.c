@@ -1790,7 +1790,7 @@ void A_BossDeath (mobj_t* mo)
     if ( gamemode == commercial)
     {
 #if 1
-	if (metamap != 7)
+	if (metamap == 7)
 #else
 	if (gamemap == 7 ||
 	// [crispy] Master Levels in PC slot 7
