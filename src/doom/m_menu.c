@@ -3277,7 +3277,7 @@ void M_Drawer (void)
 
     
     if (gamemode == commercial)
-        V_DrawPatch(0, 0, W_CacheLumpName("INTERPIC", PU_CACHE));
+        V_DrawPatchFullScreen(W_CacheLumpName("INTERPIC", PU_CACHE), false);
     if (currentMenu->routine)
 	currentMenu->routine();         // call Draw routine
     
