@@ -1288,22 +1288,23 @@ void M_MusicVol(int choice)
 
 void draw_apdoom_version(void)
 {
-    const char* version_text = APDOOM_VERSION_FULL_TEXT;
-    int len = strlen(APDOOM_VERSION_FULL_TEXT);
-    int x = 0;
-    for (int i = 0; i < len; ++i)
-    {
-        if (version_text[i] == ' ')
-        {
-            x += 8;
-            continue;
-        }
-        char char_name[9];
-        sprintf(char_name, "STCFN0%i", (int)version_text[i]);
+    patch_t *patch;
+    int x = HU_MSGX;
 
-        patch_t* patch = W_CacheLumpName(char_name, PU_CACHE);
-        V_DrawPatchDirect(x, 200 - 8, patch);
-        x += patch->width;
+    for (const char *p = APDOOM_VERSION_FULL_TEXT; *p; ++p)
+    {
+        if (*p == ' ' || *p < HU_FONTSTART || *p > HU_FONTEND)
+            patch = NULL;
+        else
+            patch = hu_font[(unsigned)*p - HU_FONTSTART];
+
+        if (!patch)
+            x += 8;
+        else
+        {
+            V_DrawPatchDirect(x, ORIGHEIGHT - hu_font[0]->height, patch);
+            x += patch->width;
+        }
     }
 }
 
