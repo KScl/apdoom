@@ -1229,7 +1229,10 @@ void save_state()
 
 void f_itemclr()
 {
-	// Not sure what use this would have here.
+	// This gets called when (re)connecting to the server.
+	// Any items that we need to keep track of, that can be collected multiple times,
+	// need to be cleared out here; otherwise, we will double count them on reconnect.
+	memset(ap_state.player_state.capacity_upgrades, 0, sizeof(int) * ap_ammo_count);
 }
 
 
