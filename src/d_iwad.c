@@ -31,7 +31,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#ifndef SETUP_PRG
 #include "apdoom.h"
+#endif
 
 static const iwad_t iwads[] =
 {
@@ -496,7 +498,7 @@ static boolean DirIsFile(const char *path, const char *filename)
         && !strcasecmp(M_BaseName(path), filename);
 }
 
-#if 0 // Unreferenced
+#ifdef SETUP_PRG // Only referenced by setup
 // Check if the specified directory contains the specified IWAD
 // file, returning the full path to the IWAD if found, or NULL
 // if not found.
@@ -877,7 +879,7 @@ char *D_FindIWAD(int mask, GameMission_t *mission)
 {
     char *result;
 
-#if 0
+#ifdef SETUP_PRG
     const char *iwadfile;
     int iwadparm;
     int i;
