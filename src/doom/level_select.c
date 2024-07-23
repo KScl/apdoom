@@ -42,6 +42,11 @@ void WI_loadData(void);
 
 void G_DoSaveGame(void);
 
+// Functions in "st_stuff.c" needed for drawing things using status bar graphics
+void ST_DrawKey(int x, int y, int which, boolean is_skull);
+void ST_RightAlignedShortNum(int x, int y, int digit);
+void ST_LeftAlignedShortNum(int x, int y, int digit);
+
 static wbstartstruct_t wiinfo;
 
 extern int bcnt;
@@ -51,52 +56,6 @@ int selected_ep = 0;
 int prev_ep = 0;
 int ep_anim = 0;
 int urh_anim = 0;
-
-static const char* KEY_LUMP_NAMES[] = {"STKEYS0", "STKEYS1", "STKEYS2"};
-static const char* KEY_SKULL_LUMP_NAMES[] = {"STKEYS3", "STKEYS4", "STKEYS5"};
-static const char* YELLOW_DIGIT_LUMP_NAMES[] = {
-    "STYSNUM0", "STYSNUM1", "STYSNUM2", "STYSNUM3", "STYSNUM4", 
-    "STYSNUM5", "STYSNUM6", "STYSNUM7", "STYSNUM8", "STYSNUM9"
-};
-
-
-void print_right_aligned_yellow_digit(int x, int y, int digit)
-{
-    x -= 4;
-
-    if (!digit)
-    {
-        V_DrawPatch(x, y, W_CacheLumpName(YELLOW_DIGIT_LUMP_NAMES[0], PU_CACHE));
-        return;
-    }
-
-    while (digit)
-    {
-        int i = digit % 10;
-        V_DrawPatch(x, y, W_CacheLumpName(YELLOW_DIGIT_LUMP_NAMES[i], PU_CACHE));
-        x -= 4;
-        digit /= 10;
-    }
-}
-
-
-void print_left_aligned_yellow_digit(int x, int y, int digit)
-{
-    if (!digit)
-    {
-        x += 4;
-    }
-
-    int len = 0;
-    int d = digit;
-    while (d)
-    {
-        len++;
-        d /= 10;
-    }
-    print_right_aligned_yellow_digit(x + len * 4, y, digit);
-}
-
 
 void restart_wi_anims()
 {
@@ -481,7 +440,6 @@ void DrawEpisodicLevelSelectStats()
 
             for (int k = 0; k < 3; ++k)
             {
-                const char* key_lump_name = (ap_level_info->use_skull[k]) ? KEY_SKULL_LUMP_NAMES[k] : KEY_LUMP_NAMES[k];
                 if (!ap_level_info->keys[k])
                     continue;
 
@@ -491,14 +449,14 @@ void DrawEpisodicLevelSelectStats()
                     const int checkmark_x = key_x + mapinfo->keys.checkmark_x;
                     const int checkmark_y = key_y + mapinfo->keys.checkmark_y;
 
-                    V_DrawPatch(key_x + 2, key_y + 1, W_CacheLumpName(key_lump_name, PU_CACHE));
+                    ST_DrawKey(key_x, key_y, k, ap_level_info->use_skull[k]);
                     if (ap_level_state->keys[k])
                         V_DrawPatch(checkmark_x, checkmark_y, W_CacheLumpName("CHECKMRK", PU_CACHE));
                 }
                 else
                 {
                     if (ap_level_state->keys[k])
-                        V_DrawPatch(key_x + 2, key_y + 1, W_CacheLumpName(key_lump_name, PU_CACHE));                
+                        ST_DrawKey(key_x, key_y, k, ap_level_info->use_skull[k]);
                 }
 
                 key_x += mapinfo->keys.spacing_x;
@@ -534,9 +492,9 @@ void DrawEpisodicLevelSelectStats()
                     progress_y = key_y + mapinfo->checks.y;
                     break;
             }
-            print_right_aligned_yellow_digit(progress_x, progress_y, ap_level_state->check_count);
+            ST_RightAlignedShortNum(progress_x, progress_y, ap_level_state->check_count);
             V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
-            print_left_aligned_yellow_digit(progress_x + 8, progress_y, total_check_count);
+            ST_LeftAlignedShortNum(progress_x + 8, progress_y, total_check_count);
         }
 
         // You are here

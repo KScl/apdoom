@@ -37,50 +37,12 @@ int ep_anim = 0;
 int urh_anim = 0;
 int activating_level_select_anim = 200;
 
+// Functions in "sb_bar.c" needed for drawing things using status bar graphics
+void SB_RightAlignedSmallNum(int x, int y, int digit);
+void SB_LeftAlignedSmallNum(int x, int y, int digit);
+
+// These key graphics are added for APDoom, so we don't need to work around PU_CACHE
 const char* KEY_LUMP_NAMES[] = {"SELKEYY", "SELKEYG", "SELKEYB"};
-static const char* YELLOW_DIGIT_LUMP_NAMES[] = {
-    "SMALLIN0", "SMALLIN1", "SMALLIN2", "SMALLIN3", "SMALLIN4", 
-    "SMALLIN5", "SMALLIN6", "SMALLIN7", "SMALLIN8", "SMALLIN9"
-};
-
-
-void print_right_aligned_yellow_digit(int x, int y, int digit)
-{
-    x -= 4;
-
-    if (!digit)
-    {
-        V_DrawPatch(x, y, W_CacheLumpName(YELLOW_DIGIT_LUMP_NAMES[0], PU_CACHE));
-        return;
-    }
-
-    while (digit)
-    {
-        int i = digit % 10;
-        V_DrawPatch(x, y, W_CacheLumpName(YELLOW_DIGIT_LUMP_NAMES[i], PU_CACHE));
-        x -= 4;
-        digit /= 10;
-    }
-}
-
-
-void print_left_aligned_yellow_digit(int x, int y, int digit)
-{
-    if (!digit)
-    {
-        x += 4;
-    }
-
-    int len = 0;
-    int d = digit;
-    while (d)
-    {
-        len++;
-        d /= 10;
-    }
-    print_right_aligned_yellow_digit(x + len * 4, y, digit);
-}
-
 
 void play_level(int ep, int lvl)
 {
@@ -485,9 +447,9 @@ void DrawEpisodicLevelSelectStats()
                     progress_y = key_y + mapinfo->checks.y;
                     break;
             }
-            print_right_aligned_yellow_digit(progress_x, progress_y, ap_level_state->check_count);
+            SB_RightAlignedSmallNum(progress_x, progress_y, ap_level_state->check_count);
             V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
-            print_left_aligned_yellow_digit(progress_x + 7, progress_y, total_check_count);            
+            SB_RightAlignedSmallNum(progress_x + 7, progress_y, total_check_count);
         }
     }
 
