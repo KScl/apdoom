@@ -60,12 +60,13 @@ int AmbChan;
 void S_Start(void)
 {
     int i;
-    int mnum;
 
-    ap_level_state_t* level_state = ap_get_level_state(ap_make_level_index(gameepisode, gamemap));
-    mnum = level_state->music;
-
-    S_StartSong(mnum, true);
+    // unlike Doom, Heretic calls S_Startup as part of init; don't try to play random music before in game
+    if (gameepisode > 0)
+    {
+        ap_level_state_t* level_state = ap_get_level_state(ap_make_level_index(gameepisode, gamemap));
+        S_StartSong(level_state->music, true);
+    }
 
     //stop all sounds
     for (i = 0; i < snd_Channels; i++)
