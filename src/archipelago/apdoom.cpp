@@ -518,7 +518,7 @@ int apdoom_init(ap_settings_t* settings)
 	if (ap_settings.override_reset_level_on_death)
 		ap_state.reset_level_on_death = ap_settings.reset_level_on_death;
 
-	AP_NetworkVersion version = {0, 4, 1};
+	AP_NetworkVersion version = {0, 5, 0};
 	AP_SetClientVersion(&version);
     AP_Init(ap_settings.ip, ap_settings.game, ap_settings.player_name, ap_settings.passwd);
 	AP_SetDeathLinkSupported(ap_settings.force_deathlink_off ? false : true);
