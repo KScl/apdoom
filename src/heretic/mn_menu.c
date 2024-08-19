@@ -995,6 +995,12 @@ void MN_Drawer(void)
 //
 //---------------------------------------------------------------------------
 
+void draw_apdoom_version(void)
+{
+    const char* version_text = APDOOM_VERSION_FULL_TEXT;
+    MN_DrTextA(version_text, 0, 200 - 9);
+}
+
 static void DrawInGameMenu(void)
 {
     int frame;
@@ -1004,6 +1010,8 @@ static void DrawInGameMenu(void)
     V_DrawPatch(40, 10, W_CacheLumpNum(SkullBaseLump + (17 - frame),
                                        PU_CACHE));
     V_DrawPatch(232, 10, W_CacheLumpNum(SkullBaseLump + frame, PU_CACHE));
+
+    draw_apdoom_version();
 }
 
 //---------------------------------------------------------------------------
@@ -1021,6 +1029,8 @@ static void DrawMainMenu(void)
     V_DrawPatch(40, 10, W_CacheLumpNum(SkullBaseLump + (17 - frame),
                                        PU_CACHE));
     V_DrawPatch(232, 10, W_CacheLumpNum(SkullBaseLump + frame, PU_CACHE));
+
+    draw_apdoom_version();
 }
 
 //---------------------------------------------------------------------------
@@ -1212,28 +1222,6 @@ static void DrawOptions2Menu(void)
     DrawSlider(&Options2Menu, 3, 16, snd_MaxVolume);
     DrawSlider(&Options2Menu, 5, 16, snd_MusicVolume);
 }
-
-
-void draw_apdoom_version(void)
-{
-    const char* version_text = APDOOM_VERSION_FULL_TEXT;
-    auto len = strlen(APDOOM_VERSION_FULL_TEXT);
-    int x = 0;
-    for (int i = 0; i < len; ++i)
-    {
-        if (version_text[i] == ' ')
-        {
-            x += 8;
-            continue;
-        }
-        const char* char_name[9];
-        sprintf(char_name, "FONTA%02i", ((int)version_text[i] - '!') + 1);
-        patch_t* patch = W_CacheLumpName(char_name, PU_CACHE);
-        V_DrawPatchDirect(x, 200 - 8, patch);
-        x += patch->width;
-    }
-}
-
 
 //---------------------------------------------------------------------------
 //
