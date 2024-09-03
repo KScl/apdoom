@@ -295,6 +295,12 @@ int ap_get_map_count(int ep)
 }
 
 
+int ap_total_check_count(ap_level_info_t *level_info)
+{
+	return level_info->check_count - (ap_state.check_sanity ? 0 : level_info->sanity_check_count);
+}
+
+
 ap_level_info_t* ap_get_level_info(ap_level_index_t idx)
 {
 	auto& level_info_table = get_level_info_table();

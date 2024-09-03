@@ -573,7 +573,7 @@ void DrawEpisodicLevelSelectStats()
             // Progress
             SB_RightAlignedSmallNum(x + 30 + text_w - 4, y - 1, ap_level_state->check_count);
             V_DrawPatch(x + 30 + text_w - 3, y - 1, W_CacheLumpName("STYSLASH", PU_CACHE));
-            SB_LeftAlignedSmallNum(x + 30 + text_w + 3, y - 1, ap_state.check_sanity ? ap_level_info->check_count : ap_level_info->check_count - ap_level_info->sanity_check_count);
+            SB_LeftAlignedSmallNum(x + 30 + text_w + 3, y - 1, ap_total_check_count(ap_level_info));
         }
         else
         {
@@ -604,7 +604,7 @@ void DrawEpisodicLevelSelectStats()
             // Progress
             SB_RightAlignedSmallNum(x - 4, y + stat_y_offset, ap_level_state->check_count);
             V_DrawPatch(x - 3, y + stat_y_offset, W_CacheLumpName("STYSLASH", PU_CACHE));
-            SB_LeftAlignedSmallNum(x + 3, y + stat_y_offset, ap_state.check_sanity ? ap_level_info->check_count : ap_level_info->check_count - ap_level_info->sanity_check_count);
+            SB_LeftAlignedSmallNum(x + 3, y + stat_y_offset, ap_total_check_count(ap_level_info));
         }
     }
 

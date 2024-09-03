@@ -645,7 +645,7 @@ void DrawEpisodicLevelSelectStats()
         }
         ST_RightAlignedShortNum(progress_x, progress_y, ap_level_state->check_count);
         V_DrawPatch(progress_x + 1, progress_y, W_CacheLumpName("STYSLASH", PU_CACHE));
-        ST_LeftAlignedShortNum(progress_x + 8, progress_y, ap_level_info->check_count - ap_level_info->sanity_check_count);
+        ST_LeftAlignedShortNum(progress_x + 8, progress_y, ap_total_check_count(ap_level_info));
 
         // "You are here"
         if (i == selected_level[selected_ep] && urh_anim < 25)

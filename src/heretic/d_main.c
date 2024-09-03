@@ -421,7 +421,7 @@ static void CrispyDrawStats (void)
 
         ap_level_state_t* level_state = ap_get_level_state(ap_make_level_index(gameepisode, gamemap));
         const ap_level_info_t* level_info = ap_get_level_info(ap_make_level_index(gameepisode, gamemap));
-        M_snprintf(str, sizeof(str), "I %d/%d", level_state->check_count, level_info->check_count - level_info->sanity_check_count);
+        M_snprintf(str, sizeof(str), "I %d/%d", level_state->check_count, ap_total_check_count(level_info));
         MN_DrTextA(str, left_widget_x, 2*height);
 
         M_snprintf(str, sizeof(str), "S %d/%d", player->secretcount, totalsecret);
