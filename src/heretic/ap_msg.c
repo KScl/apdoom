@@ -44,18 +44,28 @@ void HU_AddAPLine(const char* line, int len)
 void HU_AddAPMessage(const char* message)
 {
     int len = strlen(message);
-
     int i = 0;
     int j = 0;
-    char baked_line[HU_MAXLINELENGTH + 1];
-    baked_line[HU_MAXLINELENGTH] = '\0';
     int word_start = 0;
+
+    char baked_line[HU_MAXLINELENGTH + 1];
+    char persist_color = '2';
+    baked_line[0] = '~';
+    baked_line[1] = persist_color;
+
     while (i < len)
     {
         if (message[j] == ' ')
         {
             word_start = j;
         }
+        else if (message[j] == '~' && message[j+1] >= '0' && message[j+1] <= '9')
+        {
+            persist_color = message[j+1];
+            j += 2; // skip cr_esc (~) and the color defining character
+            continue;
+        }
+
         if (message[j] != '\n')
         {
             int w = MN_TextAWidth_len(message + i, j - i);
@@ -92,7 +102,7 @@ void HU_AddAPMessage(const char* message)
             word_start = j;
         }
         memcpy(baked_line + 2, message + i, j - i);
-        baked_line[0] = '~'; baked_line[1] = '2'; // Always make sure to use white
+        baked_line[HU_MAXLINELENGTH] = '\0';
         HU_AddAPLine(baked_line, (j - i) + 2);
         i = j;
         word_start = j;
@@ -102,6 +112,9 @@ void HU_AddAPMessage(const char* message)
             j++;
             word_start++;
         }
+
+        baked_line[0] = '~';
+        baked_line[1] = persist_color;
     }
 }
 
