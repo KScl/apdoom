@@ -1900,7 +1900,11 @@ void M_ReadThis2(int choice)
 void M_FinishReadThis(int choice)
 {
     choice = 0;
-    M_SetupNextMenu(&MainDef);
+    // [AP] do not allow Read This! / help menu to return to out of game menu
+    if (gamestate == 3)
+        M_SetupNextMenu(&MainDef);
+    else
+        M_SetupNextMenu(&InGameMenuDef);
 }
 
 
