@@ -1804,7 +1804,10 @@ void G_DoReborn(int playernum)
     if (!demoextend && G_CheckDemoStatus())
         return;
     if (!netgame && (ap_state.reset_level_on_death || killed_from_menu))
+    {
+        killed_from_menu = false;
         gameaction = ga_loadlevel;      // reload the level from scratch
+    }
     else
     {                           // respawn at the start
         players[playernum].mo->player = NULL;   // dissasociate the corpse
