@@ -1810,3 +1810,22 @@ void apdoom_update()
 		++it;
 	}
 }
+
+// Remote data per slot
+void ap_remote_set(const char *key, int per_slot, int value)
+{
+	AP_SetServerDataRequest rq;
+	if (per_slot)
+	{
+		rq.key += "<";
+		rq.key += ap_settings.player_name;
+		rq.key += ">";
+	}
+	rq.key += key;
+	rq.operations = { {"replace", &value} };
+	rq.default_value = 0;
+	rq.type = AP_DataType::Int;
+	rq.want_reply = false;
+
+	AP_SetServerData(&rq);
+}

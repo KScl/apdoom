@@ -2037,6 +2037,8 @@ P_SetupLevel
 
     //printf ("free memory: 0x%x\n", Z_FreeMemory());
 
+    // [ap] inform AP of last loaded level
+    ap_remote_set("Last Loaded Map", true, (episode * 1000) + map);
 }
 
 

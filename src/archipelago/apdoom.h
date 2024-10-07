@@ -205,6 +205,9 @@ ap_level_index_t ap_make_level_index(int ep /* 1-based */, int map /* 1-based */
 int ap_index_to_ep(ap_level_index_t idx);
 int ap_index_to_map(ap_level_index_t idx);
 
+// Remote data storage (global, or just for our slot if per_slot)
+void ap_remote_set(const char *key, int per_slot, int value);
+
 #ifdef __cplusplus
 }
 #endif
