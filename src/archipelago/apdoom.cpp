@@ -1799,11 +1799,7 @@ void ap_remote_set(const char *key, int per_slot, int value)
 {
 	AP_SetServerDataRequest rq;
 	if (per_slot)
-	{
-		rq.key += "<";
-		rq.key += ap_settings.player_name;
-		rq.key += ">";
-	}
+		rq.key += "<Slot" + std::to_string(AP_GetPlayerID()) + ">";
 	rq.key += key;
 	rq.operations = { {"replace", &value} };
 	rq.default_value = 0;
