@@ -1565,7 +1565,12 @@ int ap_index_to_map(ap_level_index_t idx)
 
 void apdoom_check_victory()
 {
-	if (ap_state.victory) return;
+	if (ap_state.victory)
+	{
+		// Silently resend victory state, just in case connection got dropped as we actually won
+		AP_StoryComplete();
+		return;
+	}
 
 	if (ap_state.goal == 1 && (ap_base_game == ap_game_t::doom || ap_base_game == ap_game_t::heretic))
 	{
