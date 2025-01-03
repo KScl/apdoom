@@ -794,6 +794,11 @@ P_KillMobj_Real // So we can specify death by death link
 			
 	target->flags &= ~MF_SOLID;
 	target->player->playerstate = PST_DEAD;
+
+	// [AP] it's possible for the player to be killed with positive health (via deathlink/menu)
+	// if that happens, we need to set player health to 0 to prevent touching items in death
+	if (target->player->health > 0)
+		target->health = target->player->health = target->player->neghealth = 0;
 	
 	cache_ap_player_state();
 

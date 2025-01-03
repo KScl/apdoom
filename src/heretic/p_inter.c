@@ -989,7 +989,12 @@ void P_KillMobj_Real(mobj_t * source, mobj_t * target, boolean send_death_link)
         target->player->powers[pw_flight] = 0;
         target->player->powers[pw_weaponlevel2] = 0;
         target->player->playerstate = PST_DEAD;
-        
+
+        // [AP] it's possible for the player to be killed with positive health (via deathlink/menu)
+        // if that happens, we need to set player health to 0 to prevent touching items in death
+        if (target->player->health > 0)
+            target->health = target->player->health = 0;
+
         cache_ap_player_state(); // [Ap] Make sure we cache it's inventory
 
 	    if (send_death_link)
