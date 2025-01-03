@@ -1062,16 +1062,8 @@ class LocationDict(TypedDict, total=False): \n\
         if (!game->json_level_select.isNull())
             defs_json["level_select"] = game->json_level_select;
 
-        Json::StreamWriterBuilder swb;
-        swb["commentStyle"] = "None";
-        swb["indentation"] = "";
-        std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
-
-        std::fstream output_stream;
-        output_stream.open(cpp_out_dir + game->codename + ".json", std::fstream::out);
-        sw->write(defs_json, &output_stream);
-        output_stream << std::endl;
-        output_stream.close();
+        std::string filename = cpp_out_dir + game->codename + ".json";
+        onut::saveJson(defs_json, filename, false);
     }
 #endif
 

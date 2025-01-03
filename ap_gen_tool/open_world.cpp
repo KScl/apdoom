@@ -306,7 +306,7 @@ void save(game_t* game)
     _json["maps"] = eps_json;
 
     std::string filename = "data/" + game->name + ".json";
-    onut::saveJson(_json, filename, false);
+    onut::saveJson(_json, filename, true); // Output styled, for sensible merging
 }
 
 
